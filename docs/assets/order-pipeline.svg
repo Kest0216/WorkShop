@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" width="980" height="560" role="img" aria-labelledby="title desc">
+  <title id="title">How a Work Order Moves Through WorkShop</title>
+  <desc id="desc">Animated pipeline diagram showing how a Work Order moves from your prompt through Frontier planning, Employee Book specialist matching (branching to Phase 1 RFT training queue when a specialty is missing), parallel $0 open-source benches, automated tests and review (branching back on FIX or loading onto the Merge Truck on PASS), and final QA shipping.</desc>
+  <defs>
+    <style>
+      .bg { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .flow { stroke-dasharray: 7 7; animation: dash 1.6s linear infinite; }
+      .flow-slow { stroke-dasharray: 6 8; animation: dash 2.4s linear infinite; }
+      .flow-rev { stroke-dasharray: 6 6; animation: dash 1.8s linear infinite; }
+      .pulse { animation: glow 2.6s ease-in-out infinite; }
+      @keyframes dash { to { stroke-dashoffset: -28; } }
+      @keyframes glow { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.95; } }
+      @media (prefers-reduced-motion: reduce) {
+        .flow, .flow-slow, .flow-rev, .pulse { animation: none; }
+      }
+    </style>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1e2538" stroke-width="1"/>
+    </pattern>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#7aaeff"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#5bd475"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#f5c04e"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#f27474"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <g class="bg">
+    <!-- Backdrop -->
+    <rect x="0" y="0" width="980" height="560" rx="16" fill="#141824"/>
+    <rect x="0" y="0" width="980" height="560" rx="16" fill="url(#grid)" opacity="0.65"/>
+    <rect x="1" y="1" width="978" height="558" rx="15" fill="none" stroke="#2c3550" stroke-width="2"/>
+
+    <!-- Header & Legend -->
+    <text x="32" y="40" font-size="18" font-weight="700" fill="#f8f6f0">How a Work Order Moves Through WorkShop</text>
+    <text x="32" y="60" font-size="12.5" fill="#9fb0d0">Frontier AI handles planning &amp; code review; free ($0) open-source teams do the heavy coding</text>
+
+    <circle cx="628" cy="40" r="5" fill="#7aaeff"/>
+    <text x="639" y="44" font-size="12" font-weight="600" fill="#cbd5e1">Frontier API ($)</text>
+    <circle cx="746" cy="40" r="5" fill="#5bd475"/>
+    <text x="757" y="44" font-size="12" font-weight="600" fill="#cbd5e1">Local OSS ($0)</text>
+    <circle cx="858" cy="40" r="5" fill="#f5c04e"/>
+    <text x="869" y="44" font-size="12" font-weight="600" fill="#cbd5e1">Branch / You</text>
+
+    <!-- ROW 1: Order Intake -> Planning -> Dispatch Branch -> Phase 1 RFT Spin-off -->
+    <!-- 1. Your Order -->
+    <rect x="32" y="88" width="172" height="90" rx="10" fill="#1d2335" stroke="#f5c04e" stroke-width="1.8"/>
+    <rect x="44" y="99" width="60" height="18" rx="4" fill="#3a2f15"/>
+    <text x="74" y="112" text-anchor="middle" font-size="10.5" font-weight="700" fill="#f5c04e">1 · YOU</text>
+    <text x="44" y="136" font-size="14" font-weight="700" fill="#f8f6f0">Drop Off Order</text>
+    <text x="44" y="155" font-size="12" fill="#9fb0d0">Plain-English goal +</text>
+    <text x="44" y="170" font-size="12" fill="#9fb0d0">new or existing repo</text>
+
+    <!-- Arrow 1 -> 2 -->
+    <line x1="204" y1="133" x2="238" y2="133" stroke="#94a3b8" stroke-width="2" class="flow" marker-end="url(#arr-slate)"/>
+
+    <!-- 2. Frontier Officer Plans -->
+    <rect x="242" y="88" width="206" height="90" rx="10" fill="#1d2335" stroke="#7aaeff" stroke-width="1.8"/>
+    <rect x="254" y="99" width="128" height="18" rx="4" fill="#192d4d"/>
+    <text x="318" y="112" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7aaeff">2 · OFFICER (API)</text>
+    <text x="254" y="136" font-size="14" font-weight="700" fill="#f8f6f0">Architects the Plan</text>
+    <text x="254" y="155" font-size="12" fill="#9fb0d0">Splits tasks &amp; safe file zones</text>
+    <text x="254" y="170" font-size="11.5" fill="#f5c04e">Optional pause for your OK</text>
+
+    <!-- Arrow 2 -> 3 -->
+    <line x1="448" y1="133" x2="484" y2="133" stroke="#7aaeff" stroke-width="2" class="flow" marker-end="url(#arr-blue)"/>
+
+    <!-- 3. Employee Book & Harness Rack (Branch 1) -->
+    <rect x="488" y="84" width="212" height="98" rx="10" fill="#21263c" stroke="#c084fc" stroke-width="2"/>
+    <rect x="500" y="95" width="136" height="18" rx="4" fill="#2f224b"/>
+    <text x="568" y="108" text-anchor="middle" font-size="10.5" font-weight="700" fill="#d8b4fe">BRANCH 1 · MATCH</text>
+    <text x="500" y="133" font-size="14" font-weight="700" fill="#f8f6f0">Employee Book</text>
+    <text x="500" y="152" font-size="12" fill="#9fb0d0">Trained specialist on file?</text>
+    <text x="500" y="168" font-size="11.5" fill="#5bd475">+ Pulls Harness from Rack</text>
+
+    <!-- Branch 1 NO -> 3B RFT Queue -->
+    <line x1="700" y1="133" x2="744" y2="133" stroke="#f5c04e" stroke-width="2" class="flow" marker-end="url(#arr-amber)"/>
+    <rect x="706" y="109" width="32" height="16" rx="4" fill="#3a2f15"/>
+    <text x="722" y="121" text-anchor="middle" font-size="10" font-weight="700" fill="#f5c04e">NO</text>
+
+    <!-- 3B. Phase 1 RFT Training Queue -->
+    <rect x="748" y="84" width="200" height="98" rx="10" fill="#1d2335" stroke="#f5c04e" stroke-width="1.8" stroke-dasharray="5 3"/>
+    <rect x="760" y="95" width="138" height="18" rx="4" fill="#3a2f15"/>
+    <text x="829" y="108" text-anchor="middle" font-size="10.5" font-weight="700" fill="#f5c04e">SPIN-OFF · PHASE 1</text>
+    <text x="760" y="133" font-size="14" font-weight="700" fill="#f8f6f0">Queue RFT Training</text>
+    <text x="760" y="152" font-size="12" fill="#9fb0d0">Logs gap spec for later RL</text>
+    <text x="760" y="168" font-size="11.5" fill="#5bd475">Runs OSS fallback right now</text>
+
+    <!-- Trunk connecting Row 1 to Row 2 -->
+    <!-- Branch 1 YES down to trunk bus -->
+    <path d="M 594 182 L 594 214 L 142 214 L 142 246" fill="none" stroke="#5bd475" stroke-width="2.2" class="flow" marker-end="url(#arr-green)"/>
+    <!-- Branch 1 NO fallback merges into trunk bus -->
+    <path d="M 848 182 L 848 214 L 598 214" fill="none" stroke="#f5c04e" stroke-width="1.8" class="flow-slow"/>
+    <rect x="292" y="203" width="174" height="20" rx="10" fill="#173326" stroke="#2f6f4a" stroke-width="1"/>
+    <text x="379" y="217" text-anchor="middle" font-size="11" font-weight="600" fill="#7ce896">YES · Equips Harness Rig</text>
+    <rect x="650" y="203" width="160" height="20" rx="10" fill="#332814" stroke="#8f6b22" stroke-width="1"/>
+    <text x="730" y="217" text-anchor="middle" font-size="11" font-weight="600" fill="#f5c04e">Runs $0 Base Fallback</text>
+
+    <!-- ROW 2: Parallel OSS Benches -> Auto Tests & Review -> Verdict Branch -> Merge Truck -->
+    <!-- 4. Parallel OSS Benches -->
+    <rect x="32" y="250" width="220" height="104" rx="10" fill="#1d2335" stroke="#5bd475" stroke-width="1.8"/>
+    <rect x="44" y="261" width="124" height="18" rx="4" fill="#173326"/>
+    <text x="106" y="274" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5bd475">4 · OSS CREW ($0)</text>
+    <text x="44" y="298" font-size="14" font-weight="700" fill="#f8f6f0">Build on Own Benches</text>
+    <text x="44" y="317" font-size="12" fill="#9fb0d0">Parallel isolated git clones</text>
+    <text x="44" y="333" font-size="12" fill="#9fb0d0">Team Leads unblock questions</text>
+    <text x="44" y="347" font-size="11" fill="#7ce896">Ollama · vLLM · Stand-in</text>
+
+    <!-- Arrow 4 -> 5 -->
+    <line x1="252" y1="302" x2="290" y2="302" stroke="#5bd475" stroke-width="2" class="flow" marker-end="url(#arr-green)"/>
+
+    <!-- 5. Automated Checks & Review Gate -->
+    <rect x="294" y="250" width="236" height="104" rx="10" fill="#1d2335" stroke="#7aaeff" stroke-width="1.8"/>
+    <rect x="306" y="261" width="154" height="18" rx="4" fill="#192d4d"/>
+    <text x="383" y="274" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7aaeff">5 · TESTS + REVIEW GATE</text>
+    <text x="306" y="298" font-size="14" font-weight="700" fill="#f8f6f0">Auto-Check &amp; Inspect</text>
+    <text x="306" y="317" font-size="12" fill="#9fb0d0">Runs your project test suite</text>
+    <text x="306" y="333" font-size="12" fill="#9fb0d0">Checks file zones for safety</text>
+    <text x="306" y="347" font-size="11.5" fill="#7aaeff">Frontier officer reviews diff</text>
+
+    <!-- Arrow 5 -> Verdict -->
+    <line x1="530" y1="302" x2="566" y2="302" stroke="#7aaeff" stroke-width="2" class="flow" marker-end="url(#arr-blue)"/>
+
+    <!-- Branch 2: Verdict -->
+    <rect x="570" y="256" width="144" height="92" rx="10" fill="#21263c" stroke="#c084fc" stroke-width="2"/>
+    <rect x="582" y="267" width="120" height="18" rx="4" fill="#2f224b"/>
+    <text x="642" y="280" text-anchor="middle" font-size="10.5" font-weight="700" fill="#d8b4fe">BRANCH 2 · GATE</text>
+    <text x="642" y="306" text-anchor="middle" font-size="14.5" font-weight="700" fill="#f8f6f0">PASS or FIX?</text>
+    <text x="642" y="328" text-anchor="middle" font-size="11.5" fill="#9fb0d0">No broken code merges</text>
+
+    <!-- Branch 2 PASS -> 6 Merge Truck -->
+    <line x1="714" y1="302" x2="768" y2="302" stroke="#5bd475" stroke-width="2.2" class="flow" marker-end="url(#arr-green)"/>
+    <rect x="719" y="278" width="44" height="17" rx="4" fill="#173326" stroke="#2f6f4a" stroke-width="1"/>
+    <text x="741" y="290" text-anchor="middle" font-size="10" font-weight="700" fill="#5bd475">PASS</text>
+
+    <!-- 6. Merge Truck -->
+    <rect x="772" y="250" width="176" height="104" rx="10" fill="#1d2335" stroke="#5bd475" stroke-width="1.8"/>
+    <rect x="784" y="261" width="112" height="18" rx="4" fill="#173326"/>
+    <text x="840" y="274" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5bd475">6 · MERGE TRUCK</text>
+    <text x="784" y="298" font-size="14" font-weight="700" fill="#f8f6f0">Load Verified Crate</text>
+    <text x="784" y="317" font-size="12" fill="#9fb0d0">Merges 1 task at a time</text>
+    <text x="784" y="333" font-size="12" fill="#9fb0d0">Re-runs full test suite</text>
+    <text x="784" y="347" font-size="11" fill="#7ce896">Ready when job wraps up</text>
+
+    <!-- Branch 2 FIX loop under Row 2 -->
+    <path d="M 642 348 L 642 392 L 142 392 L 142 358" fill="none" stroke="#f27474" stroke-width="2" class="flow-rev" marker-end="url(#arr-red)"/>
+    <rect x="255" y="381" width="276" height="22" rx="11" fill="#3a191f" stroke="#a63c46" stroke-width="1"/>
+    <text x="393" y="396" text-anchor="middle" font-size="11.5" font-weight="600" fill="#fca5a5">FIX · Back to bench with numbered change notes</text>
+
+    <!-- Arrow 6 -> 7 (Truck down to QA + Owner Ship) -->
+    <line x1="860" y1="354" x2="860" y2="432" stroke="#5bd475" stroke-width="2.2" class="flow" marker-end="url(#arr-green)"/>
+    <rect x="780" y="381" width="158" height="22" rx="11" fill="#173326" stroke="#2f6f4a" stroke-width="1"/>
+    <text x="859" y="396" text-anchor="middle" font-size="11.5" font-weight="600" fill="#7ce896">All tasks checked &amp; merged</text>
+
+    <!-- ROW 3: Safety Rails + 7. Final QA & Your Ship Click -->
+    <!-- Safety Rails summary box -->
+    <rect x="32" y="436" width="440" height="96" rx="10" fill="#181d2c" stroke="#303954" stroke-width="1.5"/>
+    <text x="48" y="458" font-size="12" font-weight="700" fill="#cbd5e1">Built-In Guardrails at Every Step</text>
+    <text x="48" y="479" font-size="12" fill="#9fb0d0">• Hub owns git — agents edit files only inside OS sandboxes</text>
+    <text x="48" y="498" font-size="12" fill="#9fb0d0">• Spend caps count Frontier API turns only (OSS turns cost $0)</text>
+    <text x="48" y="517" font-size="12" fill="#9fb0d0">• Saves state on disk so closing or restarting never loses work</text>
+
+    <!-- 7. Final QA & Owner Approval -->
+    <rect x="500" y="436" width="448" height="96" rx="10" fill="#1d2335" stroke="#f5c04e" stroke-width="2"/>
+    <rect x="516" y="448" width="170" height="18" rx="4" fill="#3a2f15"/>
+    <text x="601" y="461" text-anchor="middle" font-size="10.5" font-weight="700" fill="#f5c04e">7 · FINAL QA &amp; SHIP (YOU)</text>
+    <circle cx="928" cy="457" r="6" fill="#5bd475" class="pulse"/>
+    <text x="516" y="486" font-size="14.5" font-weight="700" fill="#f8f6f0">Verify Requirements, Inspect Diffs, &amp; Click Ship</text>
+    <text x="516" y="506" font-size="12" fill="#cbd5e1">Officer tests every ask from your brief against the merged build.</text>
+    <text x="516" y="522" font-size="12" fill="#f5c04e">Nothing touches your real branch until you approve the exact commit.</text>
+  </g>
+</svg>

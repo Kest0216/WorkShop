@@ -1,182 +1,131 @@
 # WorkShop
 
-A Mac app for one owner (Phase 0 architecture — see [docs/ROADMAP.md](docs/ROADMAP.md)). You write a work order. Frontier **Orchestration Officers** (`gemini` / `claude`, API-key only) investigate, plan, and serve as **Final Review Gates**, while **$0 Open-Source Specialist Agent Teams** (`oss` — local/cluster `Ollama`, `vLLM`, `SGLang`, `llama.cpp`, or Phase 0 Stand-in simulation) equip modular harnesses from the **Harness Rack** to build tasks on isolated benches and load reviewed crates onto a merge truck.
+**A local pixel-art coding workshop where a smart Frontier AI plans & inspects, and free open-source specialist teams do the heavy building.**
 
-WorkShop enforces zero consumer subscription automation (ToS compliance & predictable spend): heavy coding/iteration stays on `$0` open-weight specialists matched from the **Employee Book**, and uncurated domains automatically queue structured **Phase 1 RFT training requisitions**.
+![WorkShop 16-bit shop floor](docs/progress/macapp-04-running-floor.jpg)
 
-![The shop floor inside the Mac app](docs/progress/macapp-04-running-floor.jpg)
+Running big coding projects purely on closed-source APIs burns through tokens fast — and piping automated agent loops through personal consumer subscriptions violates terms of service. WorkShop splits the job in two cleanly:
 
-## Start
+- **Orchestration Officers & Inspectors (Gemini / Claude, API key only):** Read your request, break it into safe parallel tasks, review the finished diffs, and run final QA. Because they only plan and inspect, your API spend stays small and predictable.
+- **Specialist Agent Teams (Local OSS, $0):** Open-source models (via Ollama, vLLM, SGLang, llama.cpp, or the built-in Stand-in simulator) grab a modular toolkit from the **Harness Rack** and do the iterative coding on isolated git clones — costing **$0 per million tokens**.
 
-1. Double-click `WorkShop.app` in this folder.
-2. The first time, macOS asks if WorkShop may use the Desktop folder. Click **Allow**. The app's files live here.
-3. Click **Run demo**. It uses a fake lab, costs nothing and takes about 3 minutes. Watch a job go from plan to truck, then click **Truck** and **Approve & ship all**.
-4. Set up the labs (next section). Then click **+ Work Order** and write your first real work order. Choose **New project**, or **Existing folder** (a git repo with at least one commit). Click **Start**.
+---
 
-Closing the window does not stop the work. Quit with a job running asks: **Keep working** or **Pause and quit**.
+## Try It in 60 Seconds
 
-## What you need
+Zero API keys, zero GPUs, and zero `npm install` (WorkShop runs on Node 20+ built-ins only).
 
-| Thing | Why | Check |
-|---|---|---|
-| macOS 14 or newer | The app | |
-| Node.js 20 or newer | The hub runs on it | `node --version` |
-| git | The hub keeps all work in git | `git --version` |
-| Open-weight runtime (`oss`) | Specialist Teams (`$0`): Ollama, vLLM, SGLang, llama.cpp, or built-in Phase 0 Stand-in mode | Configure in **Runtimes & Keys** |
-| Antigravity CLI (`agy`) | Gemini Orchestration Officers & Review Gates (API key mode) | `agy --version` |
-| Claude Code CLI (`claude`) | Optional Claude cross-check Review Gates (API key mode) | `claude --version` |
+1. **Open the Mac app:** Double-click **`WorkShop.app`** (if macOS asks for Desktop access, click **Allow**), or launch the server directly with `npm start` and open the URL printed in your terminal.
+2. **Run the demo:** Click **Run demo** on the welcome card. It runs a simulated build for free so you can watch specialists walk to benches, post updates on the board, load crates onto the truck, and test the **Approve & Ship** flow.
 
-WorkShop has no external dependencies. There is no `npm install`.
+---
 
-## Set up the runtimes
+## How an Order Moves Through the Shop
 
-Open **Runtimes** (or follow the first-run **Runtime setup** strip on the floor):
+<p align="center">
+  <img src="docs/assets/order-pipeline.svg" width="100%" alt="Animated diagram showing how a Work Order moves and branches through WorkShop">
+</p>
 
-1. **Open-Source Agent Team Runtime (`oss`, \$0).** Pick an engine (`ollama`, `vllm`, `sglang`, `llamacpp`, or `command`), enter your base URL (`http://127.0.0.1:11434/v1`), or enable **Phase 0 Stand-in simulation mode** to exercise Harness Rack + Employee Book orchestration locally with zero GPU.
-2. **Frontier Officers & Review Gates (`gemini` / `claude`, API-key only).** Choose **Use an API key**, paste your `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` into the Keychain card, and press **Test** (required for safety mode **Sandboxed**). Consumer subscription logins are disabled in Phase 0 for Terms-of-Service safety and predictable costs.
+Here is what happens behind the scenes whenever you submit a **+ Work Order**:
 
-A runtime chip in the top bar turns from **setup** to **ok** (`sim` / `local` for `oss`) once ready. One Frontier officer + `oss` (or Stand-in) is enough to run full teams.
+1. **You drop off an order:** Describe what you want built in plain English, pick a new project or point at an existing git repo, and choose a team size.
+2. **Frontier Officer plans it out:** A Gemini or Claude officer reads your codebase and turns your goal into a checklist of requirements, tasks, and strict **file zones** (so parallel builders never edit the same files at once). *If you checked "Pause for plan review", it waits here for your thumbs-up before anyone writes code.*
+3. **Branch 1 — Employee Book check (`Roster`):** When assigning a task, the router checks your **Employee Book** for a trained specialist character matching that kind of work:
+   - **Trained match found:** That character steps up to the bench and equips their **Harness Rig** (`.shop/HARNESS.md`) from the **Harness Rack**.
+   - **No trained specialist yet:** Work doesn't stall — the job runs today using a capable `$0` base OSS model + harness, **and branches off a training requisition** into the **Phase 1 RFT Queue** so that specialty can be fine-tuned later.
+4. **Parallel `$0` OSS benches:** Each task runs in its own isolated git clone inside an OS sandbox. Agents can only touch files in their assigned bench and can ask **Team Leads** or **you** questions (2–4 quick multiple-choice options) on the **Board**.
+5. **Branch 2 — Automated checks & Review Gate:** When a specialist finishes, the hub runs your project's test command, checks that only allowed files changed, and hands the diff to a Frontier Reviewer:
+   - **`FIX` branch:** If tests fail or something looks wrong, it bounces right back to the specialist's bench with numbered fix notes.
+   - **`PASS` branch:** The hub merges that task one at a time, re-runs checks to verify the combined repo still passes, and loads a **crate** onto the **Merge Truck**.
+6. **Final QA & Your Call:** Once all requirements pass, open **Truck**, inspect any diff line-by-line, and click **Approve & Ship** to fast-forward your real branch (`main`) cleanly. Nothing touches your branch until you approve that exact commit.
 
-## How a job runs
+---
 
-```
- you            bosses          makers            hub              reviewer          you
-  |               |               |                |                  |               |
-  | work order -> |               |                |                  |               |
-  |               | plan: requirements + tasks     |                  |               |
-  |  (approve the plan, if you asked for that)     |                  |               |
-  |               | ------------> | build at a bench (own git clone)  |               |
-  |               |               | DONE --------> | commit, guard, zone check, tests |
-  |               |               |                | ---------------> | PASS or FIX   |
-  |               |               |                | merge (one at a time) -> TRUCK   |
-  |               | QA: every requirement checked against the merged work             |
-  |               | report                         |                  |               |
-  |               |               |                |   truck waits  ----------------> |
-  |               |               |                | <-- Approve & ship (one exact commit)
-  |               |               |                | your branch moves forward to it  |
-```
+## Setting Up Models
 
-Job states: `queued → planning → (plan_review) → running → qa → delivering → done`. A job can also be `paused` or `cancelled`. One job is on the floor at a time, and a paused job keeps the floor. More orders wait in the queue.
+Open **Runtimes** in the top bar (or use the **Quick setup** card on the floor). You only need **$0 OSS** plus **one** Frontier API key (Gemini or Claude) to run real jobs.
 
-## The crew (Phase 0 Team Architecture)
+### Option 1: Built-in `$0` Stand-in Mode (No GPU Needed)
+Great for testing custom harnesses, UI flows, and project setup on any laptop:
+1. Open **Runtimes** -> find **Open-Source Specialist Runtime (`oss`)**.
+2. Check **Enable Phase 0 Stand-in simulation ($0, no local GPU required)** and click **Save & Probe** (or click **Enable $0 Stand-in** right from the floor card).
 
-| Tier | Job | Primary Models (picked by benchmark data) |
-|---|---|---|
-| Orchestration Officer (`boss`) | Investigates, plans requirements & zones, serves as Final Review Gate, runs QA & report | Gemini 4 Carbon / Claude Fable 5.2 (API-key only) |
-| Team Lead (`manager`) | Owns a stream of tasks, unblocks specialists, re-plans blockers (\$0) | Llama 4 Scout 17B / DeepSeek-R1-32B (`oss`) |
-| Specialist (`maker`) | Equips a **Harness Rack** rig (`.shop/HARNESS.md`) and builds one task on an isolated bench (\$0) | Qwen3 Coder 32B / DeepSeek-R1-32B / Devstral 24B / Gemma 3 27B / Qwen2.5-VL 32B (`oss`) |
+### Option 2: Real Local Open-Source Models (`$0`) + 1 API Key
+1. **Start an OpenAI-compatible local server** — for example with [Ollama](https://ollama.com):
+   ```bash
+   ollama pull qwen2.5-coder:32b
+   ollama serve
+   ```
+   WorkShop defaults to `http://127.0.0.1:11434/v1` (supports Ollama, vLLM, SGLang, llama.cpp, or custom endpoints). Click **Save & Probe** in **Runtimes** to confirm detected models.
+2. **Connect a Frontier Officer & Reviewer:** Under **Gemini (`agy`)** or **Claude (`claude`)** in **Runtimes**, click **Use API key**, paste your `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` into the macOS Keychain section below (keys never touch logs or browser storage), click **Re-check**, and run the 1-click **Test**.
 
-| Crew preset | Officers | Team Leads | Specialists at once |
-|---|---|---|---|
-| Solo | 1 | 0 | 2 |
-| Standard (default) | 1 | 1 | 4 |
-| Full | 2 | 2 | 6 |
-| Custom | you choose | | |
+### Option 3: Set a Frontier Dollar Cap
+In **+ Work Order** (and **Settings**), set **Frontier API budget in USD** (for example `5`). WorkShop only counts Frontier API-key turns against that cap — OSS specialist turns always cost `$0` — and automatically pauses the job for your approval if spending hits the limit.
 
-At most 6 agent turns run at the same time (up to 6 `oss`, 2 `gemini`, 2 `claude`).
+---
 
-The router picks models from `config/models.json` (benchmark data from BenchLM.ai, CC BY-NC 4.0). At assignment time, `server/decider.js` uses your Gemini key (or TypeSafe key, with deterministic fallback) to match each task against the **Employee Book** (`config/roster.json`) and **Harness Rack** (`config/harnesses.json`). Missing/uncertified domain specialties automatically queue a **Phase 1 RFT Training Requisition** (`data/requisitions.json`) while executing cleanly on a Phase 0 OSS fallback.
+## Automated Testing & Phases 1–3
 
-## Why work does not collide or get lost
+Today's release is **Phase 0** — the complete local shop floor, Harness Rack, Employee Book, and RFT requisition queue — without downloading giant model weights or renting cloud GPUs yet.
 
-These rules are code in the hub, not requests to the agents.
+<p align="center">
+  <img src="docs/assets/roadmap-phases.svg" width="100%" alt="WorkShop Phases 0 to 3 Roadmap connecting automated tests to Phase 1 RL fine-tuning, Phase 2 specialized harnesses, and Phase 3 closed-loop team assembly">
+</p>
 
-- **The hub owns git.** Agents only edit files. The hub commits, merges and ships.
-- **One bench per task.** Each task gets its own clone. No two agents share a working folder.
-- **Zones.** Each task lists the paths it may change. Tasks that run at the same time have separate zones. A change outside the zone is refused.
-- **Merges go one at a time.** Each merge is tested again on the merged result before the next one starts.
-- **Three gates.** The tests pass. A reviewer passes it (the other lab when possible). You approve the exact commit that ships.
-- **A ledger of requirements.** Every ask in your brief becomes a numbered requirement. A second lab reads your brief and adds what the plan missed. At the end, QA checks each requirement against the merged work and gives evidence. Only you can waive one. A job cannot end with an open requirement.
-- **Your branch only moves forward.** Shipping is a fast-forward to one commit. Nothing is forced. If your branch moved in the meantime, the hub merges that in, tests again and asks you to look again.
-- **It survives restarts.** All state is on disk. After a crash the hub picks up where it stopped.
+### How Automated Tests Fit Into Phases 1, 2, and 3
+- **Today (Phase 0):** Every project sets a verification command (`checkCmd`, like `npm test` or `cargo test`) on its Blueprint. The hub runs it before work starts (baseline), on every hand-in before review, and after every sequential merge onto the truck. If you edit the repo manually, you can also trigger tests anytime from **Harnesses -> Project Tools**.
+- **Phase 1 (Automated RL / RFT Pipeline):** When an order hits a specialty gap in Phase 0, WorkShop saves a structured requisition (`TR1`, `TR2`, ...) listing the target base model, **Harness Rack** toolkit, and **reward signals** (like `check_cmd_exit_zero`, `diff_minimality`, and `zero_hub_path_touch`). A Phase 1 GPU trainer will pull that queue and use your automated test suite directly as the verifiable RL grader before promoting a new fine-tuned checkpoint.
+- **Phase 2 (Specialized Software Harnesses):** Expands `config/harnesses.json` beyond core roles into deep stack-specific rigs (Swift/macOS, Rust, SQL/data pipelines, browser QA) paired with custom linters and synthetic test suites.
+- **Phase 3 (Closed-Loop Specialist Shop):** Connects the entire pipeline end-to-end: drop off a problem -> Officer picks a certified specialist (or auto-trains & verifies a new one on a gap) -> agent team builds & validates -> long-run merge vs. rework stats automatically retire or re-calibrate weak rigs.
 
-## The message board
+*See [docs/ROADMAP.md](docs/ROADMAP.md) for the fuller breakdown of the architecture across Phases 0–3.*
 
-All agents and you share one board. The language is **ShopTalk**: a strict one-line head that the hub checks, and a short body in plain technical English.
+---
 
-```
-ASK @mgr T4: Which date format does the export use?
-ANS re:31: Use ISO 8601. See src/export.js:12.
-DONE T4 tests=6/6 acc=3/3: Added the export. See src/export.js.
-FIX re:40: 1. src/export.js:31 drops the time zone. Keep it.
-DECIDE #build: All dates are UTC from now on.
-```
+## Quick Tour of the App
 
-There are 13 kinds: `ASK ANS REQ OK NO INFO BLOCK DONE FAIL PASS FIX DECIDE CANCEL`. The hub refuses a post that breaks the rules: too long, chat, a duplicate, a loop, pasted code, a secret. Agents point at things (`src/a.js:31`, `T12`) instead of pasting them. Each agent sees only the posts it needs. That keeps the token cost low.
-
-A maker can ask the other lab for a second view: `ASK @other`. The hub also does this by itself when a task is stuck.
-
-## Your controls
-
-| Panel | What you do there |
+| Button / Floor Prop | What you do there |
 |---|---|
-| **+ Work Order** | Write a work order. Start a job, or queue it. See all jobs |
-| **Inbox** | Everything that waits for you, in one list: questions, the truck, a plan to approve, a sign-in |
-| **Blueprint** | The plan: requirements, tasks, decisions. Pause, resume, cancel. Add or waive a requirement |
-| **Board** | Read the board. Post to any agent |
-| **Truck** | The reviewed work. Read the report, look at each change, ship all or ship up to one crate, or ask for changes |
-| **Roster** (`crew`) | Live **Active Team** tree, persistent **Employee Book** (`config/roster.json`), and **Phase 1 RFT Queue** (`data/requisitions.json`) — opened by the 16-bit RFT Calibration Bay |
-| **Harnesses** (`toolkit`) | **Harness Rack** (modular OSS workflows/tools/RFT specs injected as `.shop/HARNESS.md`) and per-project **Project Tools** — opened by the wall Harness Rack and pegboard |
-| **Models** | The model table (`$0 (local)` OSS specialists + Frontier officers) and benchmark scores |
-| **Runtimes** (`keys`) | OSS engine/Stand-in config, Frontier API-key-only status, and Keychain API keys |
-| **Settings** | Safety mode, crew default, who reviews, how long a question waits for you |
+| **+ Work Order** *(front counter)* | Start a job, adjust team size, set a Frontier dollar cap, or run the demo |
+| **Inbox** | Everything waiting on you in one place: owner questions, plan approvals, paused jobs, or a ready truck |
+| **Blueprint** | Live progress: checklist of requirements, tasks grouped by status, baseline check results, pause/resume |
+| **Board** | Filtered feed of agent questions, hand-ins, and review notes; reply directly to any agent |
+| **Truck** | Diff-by-diff inspection of verified work, final report, and 1-click **Approve & Ship** |
+| **Roster** *(RFT bay)* | Live **Active Team**, persistent **Employee Book** (`config/roster.json`), and **RFT Queue** |
+| **Harnesses** *(wall rack / pegboard)* | Inspect & edit modular `.shop/HARNESS.md` rigs on the **Harness Rack**, or run one-click **Project Tools** |
+| **Models** | Browse benchmark scores, toggle active models, and view domain leaders |
+| **Runtimes** | Switch between OSS Stand-in and Ollama/vLLM, connect Frontier API keys, and run sandbox self-tests |
+| **Settings** | Presence timeout (**Here / Away** toggle in top bar), crew presets, cross-lab review toggles, sandbox mode |
 
-On a narrow window some labels get shorter (**+ Order**, **Tools**), and **Models**, **Keys**, **Settings** and **Toolkit** fold into **More**.
+---
 
-**Here / Away.** A boss may ask you a question with 2 to 4 options and a default. With **Here**, the hub waits 30 minutes, then takes the default. With **Away**, it takes the default at once. Either way the question stays in the Inbox, and you can overturn the default later.
+## Requirements & Handy Commands
 
-## Safety and cost
-
-- **Sandboxed** is the default safety mode. Every shell command of every agent runs in an OS sandbox. It can write only in its own bench. It cannot read `~/.ssh`, cloud credentials, the Keychain or WorkShop's own secrets. **Trusting** turns the sandbox off. Use it only if you must.
-- **Keys** live in the macOS Keychain. They never reach the page, the logs or the board.
-- **Local only.** The hub listens on `127.0.0.1` and needs an owner key that only the app holds.
-- **Cost.** Open-source Specialist & Stand-in turns cost `$0`. Frontier Orchestration Officer & Review Gate turns run on API keys (`billedUsd`), guarded by each work order's budget (default $20).
-- **Sleep.** While a job runs the Mac stays awake. A closed lid still sleeps. The job goes on when the Mac wakes.
-
-## Folders
-
-```
-WorkShop.app     the app (double-click)
-server/          the hub (providers/oss*, harnesses.js, roster.js, training.js, decider.js)
-ui/              the page and the 16-bit pixel scene
-config/          models.json, harnesses.json, roster.json, settings.json
-data/            state, logs, working clones, requisitions.json (git-ignored, made on first start)
-projects/        new projects are made here
-macapp/          the app's Swift source and build script
-tests/           node --test suite
-docs/            ROADMAP.md, ARCHITECTURE.md (the full contract), DESIGN-REVIEW.md
-```
-
-## For developers
+- **macOS 14+** (for `WorkShop.app` / Keychain), **Node.js 20+**, and **git**.
+- Optional for live Frontier Officers: **Antigravity CLI** (`agy`) and/or **Claude Code CLI** (`claude`) in API-key mode.
 
 ```bash
+# Start the hub server directly (prints your local browser URL)
+npm start
+
+# Start a scratch sandbox hub with the built-in mock runtime only
 node server/index.js --labs mock --secrets file --port 0 --data /tmp/ws/data --config /tmp/ws/config --projects /tmp/ws/projects
-```
 
-That starts the hub with the fake lab only and prints `WORKSHOP_READY http://127.0.0.1:<port>/#k=<key>`. Open that address in a browser. Without the three folder flags the hub uses the app's own `data/`, `config/` and `projects/`. Then it refuses to start while the app runs: one hub per data folder.
+# Run the automated test suite (no external tokens used)
+npm test
 
-```bash
-node --test tests/
-```
-
-That runs the whole suite. It never starts a real agent. Two extra test files run the real `claude` binary against a fake local API, so they use no tokens. They are off by default: set `WORKSHOP_CLI_TESTS=1` to include them.
-
-```bash
+# Rebuild WorkShop.app after modifying macapp/ Swift sources (requires Command Line Tools)
 bash macapp/build.sh
 ```
 
-That rebuilds `WorkShop.app`. It needs `swiftc` (Xcode or the Command Line Tools). A build that changes the app makes macOS ask again for the Desktop folder.
+<details>
+<summary>Quick troubleshooting & project folders</summary>
 
-## If something goes wrong
+- **Folders:** `WorkShop.app` (Mac launcher), `server/` (hub & runtimes), `ui/` (browser UI & 16-bit scene), `config/` (`models.json`, `harnesses.json`, `roster.json`), `data/` (local state, logs, task clones — git-ignored), `projects/` (new repos), `tests/` (`node --test` suites).
+- **Job stuck in `queued`?** No Frontier Officer runtime is ready yet — open **Runtimes**, save one Gemini/Claude API key (or check **Run demo** for zero-key testing).
+- **Job `paused` after closing or restarting?** Safe restarts pause active jobs automatically; open **Blueprint** and click **Resume**.
+- **Page says `Locked`?** Re-open from **`WorkShop.app`** or use the full URL containing `#k=...` printed by `npm start`.
+- **Want a fresh slate?** Quit WorkShop and delete `data/` (your `projects/`, `config/`, and macOS Keychain keys stay untouched).
+- **Logs:** `data/logs/hub.log`, `data/logs/launcher.log`, and per-agent logs in `Roster`.
 
-| You see | Do this |
-|---|---|
-| "WorkShop needs Node.js 20 or newer" | Install Node.js 20 or newer, then click **Try Again** |
-| A lab chip says **setup** | Open **Keys**. The lab card says which step is missing |
-| The job chip says **queued** and nothing runs | No lab can run a boss now. Hover the chip for the reason. Open **Keys**, or wait for the limit to reset |
-| A job is **paused** after a restart | Every normal hub stop pauses the job. Open **Blueprint** and click **Resume** |
-| The page says **Locked** | Use the app window. The address only works with the app's key |
-| An agent seems stuck | Open **Crew**, click **Log**. You can **Stop** the task, then **Retry with note**, also on the other lab |
-| You want to start over | Quit the app and delete the `data` folder. Your project folders, `config/` and Keychain keys stay. The hub forgets its jobs, the board and its list of projects |
-
-Logs: `data/logs/hub.log`, `data/logs/launcher.log`, and one file per agent.
+</details>

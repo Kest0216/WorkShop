@@ -41,10 +41,13 @@ function labSig(ctx, p) {
     ctx.labs.signinOpen(p)]);
 }
 
+const PRIMARY_KEYS = new Set(['gemini', 'anthropic', 'oss']);
+const LAB_ORDER = { oss: 0, gemini: 1, claude: 2 };
+
 function ossCard(ctx, p) {
   const { labs, store } = ctx;
   const ossCfg = (store.settings && store.settings.oss) || {};
-  const tone = p.usable ? 'ok' : 'bad';
+  const tone = p.usable ? 'ok' : 'warn';
   const st = (store.settings.selfTest || {})[p.id] || null;
   const session = labs.results.get(p.id) || null;
   const eng = ui.select([
@@ -70,8 +73,8 @@ function ossCard(ctx, p) {
   const note = p.mode && p.policyNote && p.policyNote[p.mode] ? p.policyNote[p.mode] : p.policyNote && (p.policyNote.local || p.policyNote.standin);
   return h('article', { class: ['ky-lab', tone], dataset: { lab: p.id } },
     h('header.ky-labhead', h('span', { class: ['lab-dot', tone] }), h('span.ky-labname', String(p.label || p.id)), ui.labChip(p.id, 'oss · $0'),
-      h('span.grow'), ui.chip(p.usable ? (p.mode === 'standin' ? 'stand-in' : 'ready') : 'not ready', p.usable ? 'green' : 'red')),
-    !p.usable ? h('p.ky-reason', String(p.reason || 'Local OSS endpoint is unreachable and Stand-in is off.')) : null,
+      h('span.grow'), ui.chip(p.usable ? (p.mode === 'standin' ? 'stand-in active' : 'ready') : 'needs setup', p.usable ? 'green' : 'amber')),
+    !p.usable ? h('p.ky-reason', String(p.reason || 'Local OSS endpoint is unreachable. Start Ollama/vLLM or enable Stand-in below.')) : null,
     h('dl.kv',
       h('dt', 'Role'), h('dd', 'Primary runtime for Team Leads & Specialist Agent Teams ($0 / 1M tokens)'),
       h('dt', 'Mode'), h('dd', p.mode === 'standin' ? 'Phase 0 Stand-in simulation' : `Local/Cluster endpoint (${ossCfg.engine || 'ollama'})`),
@@ -92,9 +95,12 @@ function labCard(ctx, p) {
   const { labs, store } = ctx;
   const step = labs.step(p);
   const cooling = p.cooling && p.cooling.until > Date.now() ? p.cooling : null;
-  const tone = p.usable ? 'ok' : step === 'cooling' || step === 'test' ? 'warn' : 'bad';
   const st = (store.settings.selfTest || {})[p.id] || null;
   const session = labs.results.get(p.id) || null;
+  const broken = !p.usable && (p.auth === 'none' || (p.keySet && p.mode === 'apikey' && /refused/i.test(String(p.reason || ''))) || (step === 'test' && st && st.ok === false));
+  const tone = p.usable ? 'ok' : step === 'cooling' ? 'warn' : broken ? 'bad' : 'idle';
+  const badgeText = p.usable ? 'ready' : step === 'cooling' ? 'cooling' : broken ? 'error' : step === 'test' ? 'needs self-test' : 'not set up';
+  const badgeTone = p.usable ? 'green' : step === 'cooling' ? 'amber' : broken ? 'red' : step === 'test' ? 'amber' : 'steel';
   const sandboxed = (store.settings.safety || 'sandboxed') === 'sandboxed';
   const note = (p.policyNote && p.policyNote.apikey) || null;
   const cooled = p.cooledModels && typeof p.cooledModels === 'object' ? Object.entries(p.cooledModels).filter(([, c]) => c && c.until > Date.now()) : [];
@@ -111,12 +117,14 @@ function labCard(ctx, p) {
 
   return h('article', { class: ['ky-lab', tone], dataset: { lab: p.id } },
     h('header.ky-labhead', h('span', { class: ['lab-dot', tone] }), h('span.ky-labname', String(p.label || p.id)), ui.labChip(p.id, p.lab || p.id),
-      h('span.grow'), ui.chip(p.usable ? 'ready' : 'not ready', p.usable ? 'green' : tone === 'warn' ? 'amber' : 'red')),
-    !p.usable ? h('p.ky-reason', String(p.reason || 'This runtime is not ready.')) : null,
+      h('span.grow'), ui.chip(badgeText, badgeTone)),
+    !p.usable ? (broken || tone === 'warn'
+      ? h('p.ky-reason', String(p.reason || 'This runtime hit an error.'))
+      : h('p.ky-statusline', String(p.reason || 'Optional unless you choose this runtime.'))) : null,
     h('dl.kv',
       h('dt', 'Program'), h('dd', p.installed ? [h('span.strong', String(p.version || 'installed')), p.path ? h('span.dim', ` ${p.path}`) : null] : h('span.dim', 'not installed')),
       h('dt', 'Role'), h('dd', 'Frontier Orchestration Officer & Final Review Gate (API key only)'),
-      h('dt', 'Auth'), h('dd', p.mode === 'apikey' && p.ack !== false ? (p.keySet ? 'API key saved' : h('span.dim', 'API key not saved yet')) : h('span.dim', 'Accept API key mode below (consumer subscriptions disabled)')),
+      h('dt', 'Auth'), h('dd', p.mode === 'apikey' && p.ack !== false ? (p.keySet ? 'API key saved' : h('span.dim', 'API key not saved yet')) : h('span.dim', 'Enable API key mode below (consumer subscriptions disabled)')),
       limit ? [h('dt', 'Plan limit'), h('dd', `${String(limit.status || 'unknown').replace(/_/g, ' ')}${typeof limit.utilization === 'number' ? `, ${fmt.pct(limit.utilization)} used` : ''}${limit.resetAt ? `, resets ${fmt.time(limit.resetAt)} (${fmt.until(limit.resetAt)})` : ''}`)] : null,
       cooling ? [h('dt', 'Cooling'), h('dd', ui.chip(`until ${fmt.time(cooling.until)}`, 'amber'), ' ', String(cooling.reason || ''))] : null,
       cooled.length ? [h('dt', 'Cooled models'), h('dd', cooled.map(([m, c]) => h('div', h('span.code', m), ` until ${fmt.time(c.until)}`)))] : null,
@@ -133,7 +141,7 @@ function labCard(ctx, p) {
 }
 
 function refreshLabs(ctx) {
-  const list = ctx.sel.labs(ctx.store);
+  const list = ctx.sel.labs(ctx.store).slice().sort((a, b) => (LAB_ORDER[a.id] ?? 9) - (LAB_ORDER[b.id] ?? 9));
   part(view.labsHead, String(list.length), () => (list.length ? null : h('p.dim', 'The hub lists no lab.')));
   keyed(view.labs, list, { key: (p) => p.id, sig: (p) => labSig(ctx, p), render: (p) => labCard(ctx, p) });
 }
@@ -142,8 +150,13 @@ function refreshLabs(ctx) {
 
 function focusKey(id) {
   if (!view) return;
-  const row = view.keys.querySelector(`[data-key="${String(id).replace(/[^A-Za-z0-9_-]/g, '')}"]`);
+  const sel = `[data-key="${String(id).replace(/[^A-Za-z0-9_-]/g, '')}"]`;
+  const row = view.keys.querySelector(sel) || view.extraKeys.querySelector(sel);
   if (!row) return;
+  if (view.extraKeys.contains(row) && !view.extraFold.isOpen) {
+    view.extraOpen = true;
+    view.extraFold.setOpen(true);
+  }
   row.scrollIntoView({ block: 'center' });
   const input = row.querySelector('input[type="password"]');
   if (input) input.focus({ preventScroll: true });
@@ -205,7 +218,16 @@ function refreshKeys(ctx) {
   const list = view.keyList;
   part(view.keysHead, list ? 'ok' : view.keyError ? 'err:' + view.keyError : 'wait', () => (list ? null
     : view.keyError ? h('div.callout.bad', h('div.callout-title', 'The keys did not load'), h('p', String(view.keyError)), ui.btn('Try again', { small: true, onClick: () => loadKeys(ctx) })) : h('p.dim', 'Loading the keys...')));
-  keyed(view.keys, list || [], { key: (k) => k.id, sig: (k) => [k.label, k.envVar, k.set, k.hint, k.updatedAt].join('|'), render: (k) => keyRow(ctx, k) });
+  const all = Array.isArray(list) ? list : [];
+  const primary = all.filter((k) => PRIMARY_KEYS.has(k.id));
+  const secondary = all.filter((k) => !PRIMARY_KEYS.has(k.id));
+  const spec = { key: (k) => k.id, sig: (k) => [k.label, k.envVar, k.set, k.hint, k.updatedAt].join('|'), render: (k) => keyRow(ctx, k) };
+  keyed(view.keys, primary, spec);
+  keyed(view.extraKeys, secondary, spec);
+  if (list && view.extraOpen === null) {
+    view.extraOpen = secondary.some((k) => k.set);
+    view.extraFold.setOpen(view.extraOpen);
+  }
 }
 
 function addForm(ctx) {
@@ -243,14 +265,17 @@ function addForm(ctx) {
 // ------------------------------------------------------------------ panel
 
 function render(container, ctx) {
-  view = { labsHead: h('div'), labs: h('div.ky-labs'), keysHead: h('div'), keys: h('div.ky-keys'), keyList: null, keyError: null };
+  const extraKeys = h('div.ky-keys');
+  const addBox = h('div.ky-extra', h('p.caps', { style: { marginBottom: '10px' } }, 'Add custom key'), addForm(ctx));
+  const extraFold = ui.fold('Optional & custom environment keys', () => [extraKeys, addBox], { open: true, onToggle: (v) => { if (view) view.extraOpen = v; } });
+  extraFold.setOpen(false);
+  view = { labsHead: h('div'), labs: h('div.ky-labs'), keysHead: h('div'), keys: h('div.ky-keys'), extraKeys, extraFold, extraOpen: null, keyList: null, keyError: null };
   container.append(
     ui.section(['Runtimes', h('span.count', 'open-source specialist runtime & Frontier API officers')], view.labsHead, view.labs),
-    ui.section(['API keys', h('span.count', 'stored on this Mac only')],
-      h('div.callout.ky-where', h('div.callout-title', 'Where keys are stored'),
-        h('p', { style: { margin: 0 } }, 'In the macOS Keychain, under the service "WorkShop". The hub keeps only the label, the env var, the last 4 characters and the date in data/keys-meta.json. A key value never comes back to this window, and never reaches the logs, the board or an agent of another lab.')),
-      view.keysHead, view.keys),
-    ui.section('Add custom key', addForm(ctx)));
+    ui.section(['API keys', h('span.count', 'stored in macOS Keychain')],
+      h('p.dim.ky-where', 'Saved under Keychain service "WorkShop" with metadata in ', h('span.code', 'data/keys-meta.json'), '. Only the last 4 characters ever return to the UI.'),
+      view.keysHead, view.keys,
+      h('div.ky-extra', extraFold)));
   refreshLabs(ctx);
   refreshKeys(ctx);
   loadKeys(ctx);
@@ -268,7 +293,13 @@ export default {
   title: 'Runtimes & Keys',
   label: 'Runtimes',
   short: 'Keys',
-  badge: ({ store, sel }) => sel.labsToSetUp(store).length, // runtimes the owner must set up (cooling ones come back by itself)
+  badge: ({ store, sel }) => {
+    const labs = sel.labs(store);
+    if (!labs.length) return 0;
+    const hasOss = labs.some((p) => p.id === 'oss' && p.usable);
+    const hasBoss = labs.some((p) => p.id !== 'oss' && p.usable);
+    return (hasOss ? 0 : 1) + (hasBoss ? 0 : 1);
+  },
   render,
   update(ctx) {
     if (!view) return;

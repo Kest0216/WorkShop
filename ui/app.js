@@ -590,13 +590,11 @@ const renderPresence = (() => {
   };
 })();
 
-// One usage chip per lab (contract section 13b): the plan-limit status and its reset time, amber while the lab cools down,
-// and "setup" while the lab is not usable. A click opens the lab in the Keys panel.
+// Active telemetry chips per usable or cooling runtime (contract section 13b).
+// Unconfigured providers never clutter the top bar with redundant SETUP buttons; clicking an active chip opens Runtimes & Keys.
 function labChipModel(p, now) {
   const label = String(p.label || p.id);
-  const step = sel.labStep(p, store.settings, now);
   const base = { id: String(p.id), name: String(p.id), reset: null };
-  if (!p.usable && step !== 'cooling') return { ...base, tone: 'bad', value: 'setup', title: `${label} is not ready: ${sentence(p.reason || 'it needs setup')} Press to set it up.` };
   if (p.id === 'oss') {
     const modeWord = p.mode === 'standin' ? 'Phase 0 Stand-in simulation ($0)' : 'Local/cluster OSS runtime ($0)';
     return { ...base, tone: 'ok', value: p.mode === 'standin' ? 'sim' : 'local', title: `${label}: ${modeWord}. Press to configure.` };
@@ -620,7 +618,11 @@ const renderLabChips = (() => {
   let sig = null;
   return () => {
     const now = Date.now();
-    const list = store.ready ? sel.labs(store).map((p) => labChipModel(p, now)) : [];
+    const list = store.ready
+      ? sel.labs(store)
+          .filter((p) => p.usable || sel.labStep(p, store.settings, now) === 'cooling')
+          .map((p) => labChipModel(p, now))
+      : [];
     const next = JSON.stringify(list);
     if (next === sig) return;
     sig = next;
@@ -677,58 +679,42 @@ function renderConn() {
 
 // ------------------------------------------------------------------ first-run strip and hint
 
-// One row per lab that the owner must set up, with the reason from the hub and the button for the next setup step.
-// The strip is the first-run guide: it shows in full only while no job is on the floor and no panel is open, under the hint card.
-// With a job on the floor the lab chips in the top bar say the same, and the floor stays free. A lab that only cools down is never listed here.
-const STEP_BUTTONS = {
-  install: (p) => [ui.btn('Install', { small: true, tone: 'primary', title: 'Show how to install it', onClick: () => labs.install(p) })],
-  mode: (p) => [
-    ui.btn('Use an API key', { small: true, tone: 'primary', onClick: (e) => labs.chooseMode(p, 'apikey', e.currentTarget) }),
-  ],
-  key: (p) => [ui.btn('Add the key', { small: true, tone: 'primary', onClick: () => openPanel('keys', { lab: p.id }) })],
-  oss: (p) => [ui.btn('Configure OSS', { small: true, tone: 'primary', onClick: () => openPanel('keys', { lab: p.id }) })],
-  // Consumer subscriptions are disabled in Phase 0; keep a safe fallback button pointing to Keys.
-  signin: (p) => [ui.btn('Switch to API key', { small: true, tone: 'primary', onClick: (e) => labs.chooseMode(p, 'apikey', e.currentTarget) })],
-  // The hub cannot test a program whose version it does not know: its reason then says "Re-check" (the check finds the version).
-  test: (p) => (p.version ? [ui.btn('Test', { small: true, tone: 'primary', title: 'Run the self-test: one tiny real turn', onClick: (e) => labs.test(p, e.currentTarget) })]
-    : [ui.btn('Re-check', { small: true, tone: 'primary', title: 'The hub checks this lab again: the program, its version and its sign-in', onClick: (e) => labs.recheckLab(p, e.currentTarget) }),
-      ui.btn('Test', { small: true, title: 'Run the self-test: one tiny real turn', onClick: (e) => labs.test(p, e.currentTarget) })]),
-  other: (p) => [ui.btn('Open Keys', { small: true, onClick: () => openPanel('keys', { lab: p.id }) })],
-};
+// First-run Quick Setup guide: shown while no job exists, no panel is open, and either the $0 OSS runtime
+// or at least one Frontier Officer runtime (Gemini/Claude) still needs setup.
 let stripSig = null;
 function renderStrip() {
   const all = sel.labs(store);
-  const bad = sel.labsToSetUp(store);
-  // The strip guides the first run only: it shows while no job exists. Once a job ran (the demo too), the lab chips in the top bar
-  // carry the lab state, so the strip never comes back over the floor (for example over the confetti of a finished job).
-  // Hide keeps it away until a lab that was ready needs setup again (the list of labs to set up changes).
+  const hasOss = all.some((p) => p.id === 'oss' && p.usable);
+  const hasBoss = all.some((p) => p.id !== 'oss' && p.usable);
+  const need = [!hasOss && 'oss', !hasBoss && 'boss'].filter(Boolean);
   const hiddenFor = String(prefs.get('stripHidden', '') || '');
-  const hidden = hiddenFor !== '' && bad.every((p) => hiddenFor.split(',').some((x) => x === p.id || x.startsWith(p.id + ':')));
-  const show = store.ready && bad.length > 0 && !open && sel.jobs(store).length === 0 && !hidden;
-  const sig = show ? JSON.stringify([all.length, bad.map((p) => [p.id, p.label, p.reason, labs.step(p), p.version, labs.signinOpen(p)])]) : '';
+  const hidden = hiddenFor !== '' && need.every((x) => hiddenFor.split(',').some((hKey) => hKey === x || hKey.startsWith(x + ':')));
+  const show = store.ready && all.length > 0 && need.length > 0 && !open && sel.jobs(store).length === 0 && !hidden;
+  const sig = show ? JSON.stringify([hasOss, hasBoss]) : '';
   if (sig === stripSig) return;
   stripSig = sig;
   el.strip.hidden = !show;
   if (!show) { clear(el.strip); return; }
-  const ready = all.filter((p) => p.usable).length;
+  const statusLine = !hasOss && !hasBoss
+    ? 'Enable $0 Stand-in to test workflows locally, or add one Gemini / Claude API key for real jobs.'
+    : !hasOss
+      ? 'Frontier Officer ready. Start a local OSS model or enable $0 Stand-in for your specialist crew.'
+      : '$0 OSS specialist runtime ready. Add one Gemini or Claude API key for real orchestration & review.';
   mount(el.strip,
     h('div.strip-head',
-      h('span.strip-tag', 'Runtime setup'),
-      h('span.strip-note', ready ? `${ready} of ${all.length} runtimes ready` : 'No runtime ready yet. Enable OSS Stand-in or add a Frontier API key.'),
-      h('span.strip-acts',
-        ui.btn('Re-check', { small: true, title: 'Look again for the lab programs and their sign-in', onClick: (e) => labs.recheck(e.currentTarget) }),
-        ui.btn('Hide', { small: true, title: 'Hide this. The lab chips in the top bar stay.', onClick: () => { prefs.set('stripHidden', bad.map((p) => p.id).join(','), 300); renderStrip(); } }))),
-    bad.map((p) => {
-      const step = labs.step(p);
-      const name = String(p.label || p.id);
-      let why = String(p.reason || 'Not ready.');
-      if (why.startsWith(name + ' ')) why = why.slice(name.length + 1); // "Claude Code is not signed in." after the name: say the name once
-      if (step === 'signin' && labs.signinOpen(p)) why = labs.openNote(p); // what to do now, in place of "not checked yet"
-      return h('div', { class: ['lab', step === 'test' ? 'warn' : 'bad'] },
-        h('span.lab-dot'), h('span.lab-name', name),
-        h('span.lab-why', why),
-        h('span.lab-acts', (STEP_BUTTONS[step] || STEP_BUTTONS.other)(p)));
-    }));
+      h('span.strip-tag', 'Quick setup'),
+      h('span.strip-note', statusLine),
+      ui.btn('Hide', { small: true, title: 'Hide this guide. You can open Runtimes anytime from the top bar.', onClick: () => { prefs.set('stripHidden', need.join(','), 300); renderStrip(); } })),
+    h('div.strip-quick-acts',
+      !hasOss ? ui.btn('Enable $0 Stand-in', { small: true, tone: 'go', onClick: (e) => ui.busy(e.currentTarget, async () => {
+        const res = await api.put('/api/providers/oss', { ...((store.settings && store.settings.oss) || {}), standIn: true });
+        if (!res) return;
+        const fresh = await api.get('/api/settings', { quiet: true });
+        if (fresh) store.set('settings', fresh);
+        await labs.reload();
+        toasts.show({ level: 'info', text: 'Phase 0 Stand-in simulation enabled ($0).' });
+      }) }) : null,
+      ui.btn('Open Runtimes & Keys', { small: true, tone: 'primary', onClick: () => openPanel('keys') })));
 }
 
 let hintBuilt = false;

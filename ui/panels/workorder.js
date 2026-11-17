@@ -53,11 +53,15 @@ function notes(ctx) {
   }
   const labs = sel.labs(store);
   if (labs.length && !labs.some(sel.labUsable)) {
-    out.push(h('div.callout.bad',
-      h('div.callout-title', 'No runtime is ready'),
-      h('p', 'Enable OSS Stand-in, connect a local OSS engine, or add a Frontier API key before you start a real job. The demo runs without one.'),
-      h('ul', labs.map((p) => h('li', h('span.strong', String(p.label || p.id)), ': ', String(p.reason || 'not ready')))),
-      ui.btn('Open Runtimes & Keys', { small: true, onClick: () => ctx.openPanel('keys') })));
+    out.push(h('div.callout.you',
+      h('div.callout-title', 'No runtime enabled yet'),
+      h('p', 'Enable $0 Stand-in simulation, connect a local Ollama/vLLM server, or add one Frontier API key before starting a real job.'),
+      h('div.row',
+        ui.btn('Open Runtimes & Keys', { small: true, tone: 'primary', onClick: () => ctx.openPanel('keys') }),
+        ui.btn('Try demo ($0)', { small: true, onClick: (e) => ui.busy(e.currentTarget, async () => {
+          const demoJob = await ctx.api.post('/api/demo');
+          if (demoJob) ctx.openPanel('blueprint');
+        }) }))));
   }
   return out;
 }
@@ -147,12 +151,12 @@ function render(container, ctx) {
   };
 
   // 4 rules
-  const approve = ui.checkbox('Show me the plan first. Specialists start after I approve it.', draft.approvePlan, (v) => set('approvePlan', v));
+  const approve = ui.checkbox('Pause for plan review before specialists start building', draft.approvePlan, (v) => set('approvePlan', v));
   const budget = h('input', { type: 'text', inputMode: 'decimal', value: draft.budget, autocomplete: 'off', placeholder: 'no limit', oninput: () => set('budget', budget.value) });
   const mustBudget = ctx.sel.needsBudget(ctx.store);
   const fBudget = ui.field(mustBudget ? 'Frontier API budget in USD (required)' : 'Frontier API budget in USD', budget, { hint: mustBudget
-    ? 'A Frontier runtime bills per token (API key mode). OSS specialist turns cost $0. The job pauses when API spend reaches this cap.'
-    : 'Counts Frontier API-key turns only. Open-source & Stand-in specialist turns cost $0. Empty means no limit.' });
+    ? 'Caps Frontier API-key turns. OSS specialist & Stand-in turns cost $0.'
+    : 'Frontier API turns only ($0 for OSS & Stand-in). Leave blank for no limit.' });
   const money = h('div.wo-money');
   budget.replaceWith(money);
   money.append(budget);
@@ -211,13 +215,12 @@ function render(container, ctx) {
 
   const form = h('form', { novalidate: true, onsubmit: (e) => { e.preventDefault(); submit(); } },
     h('div.wo-head',
-      h('div', h('h3.wo-title', 'Work order'), h('div.wo-sub', 'Tell the crew what to make. They plan, build, review and load the truck.')),
-      h('div.wo-meta', h('div.caps', 'Date'), h('div', ui.fmt.date(Date.now()).split(',')[0]))),
+      h('div', h('h3.wo-title', 'New work order'), h('div.wo-sub', 'Describe what you want built. Officers plan & inspect; OSS specialists build in isolated branches.'))),
     noteBox,
-    ui.section([h('span.wo-step', '1'), 'What'], fTitle, ui.group('Kind', kind), fBrief),
+    ui.section([h('span.wo-step', '1'), 'What to build'], fTitle, ui.group('Kind', kind), fBrief),
     ui.section([h('span.wo-step', '2'), 'Where'], ui.group('Project', mode), fName, pathRow),
-    ui.section([h('span.wo-step', '3'), 'Who'], gCrew),
-    ui.section([h('span.wo-step', '4'), 'Rules'], approve, fBudget),
+    ui.section([h('span.wo-step', '3'), 'Team'], gCrew),
+    ui.section([h('span.wo-step', '4'), 'Review & budget'], approve, fBudget),
     h('div.wo-actions', start, demo));
   ui.submitOnEnter(brief, submit, { mod: true });
   for (const f of [fTitle, fBrief, fName, fPath, fB, fM, fK, fBudget]) f.control.addEventListener('input', () => f.setError('')); // an error leaves when the owner types

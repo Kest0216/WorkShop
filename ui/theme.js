@@ -2,15 +2,10 @@
 // style.css carries sensible defaults, so the page looks right before (or without) the palette.
 
 // CSS variable -> names it may have in PALETTE (first hit wins). Names are compared without case, dashes or underscores.
+// Scene framing, wood/steel accents, and signal colors track PALETTE; reading surfaces and ink use calm high-contrast tokens below.
 const WANT = {
-  '--ink': ['ink', 'outline', 'black', 'dark'],
-  '--ink-soft': ['wood2', 'inkSoft', 'umber'],
   '--shadow': ['shadow', 'night'],
   '--letterbox': ['wallDark', 'letterbox', 'shadow'],
-  '--paper': ['paper', 'cream', 'parchment'],
-  '--paper-2': ['paper2', 'paperShade', 'paperDark', 'sand', 'tan'],
-  '--paper-3': ['plaster', 'paper3', 'paperEdge', 'khaki'],
-  '--white': ['white', 'paperLight', 'chalk'],
   '--wood': ['wood3', 'wood', 'woodMid', 'brown'],
   '--wood-dark': ['wood2', 'woodDark', 'woodShade', 'brownDark'],
   '--wood-light': ['wood4', 'woodLight', 'woodHi', 'brownLight'],
@@ -27,6 +22,19 @@ const WANT = {
   '--orange': ['orange'], '--lime': ['lime'], '--teal': ['teal'], '--purple': ['purple'], '--sky': ['sky'], '--pink': ['pink'], '--yellow': ['yellow'],
   '--leaf': ['leaf2', 'leaf'], '--leaf-dark': ['leaf1', 'leafDark'], '--rust': ['rust3', 'rust'], '--navy': ['navy2', 'navy'], '--navy-dark': ['navy1', 'navyDark'],
   '--brick-light': ['brick3', 'brickLight'], '--brick-dark': ['brick1', 'brickDark'],
+};
+
+// Calm reading & form surface tokens (decoupled from raw 16-bit sprite colors to prevent eye strain).
+const UI_CALM = {
+  '--ink': '#1d1c22',
+  '--ink-soft': '#5f5b53',
+  '--paper': '#f8f6f0',
+  '--paper-2': '#efebe2',
+  '--paper-3': '#dcd5c7',
+  '--white': '#ffffff',
+  '--border': '#d8d1c4',
+  '--border-strong': '#b5ad9e',
+  '--link': '#2b547e',
 };
 
 const norm = (k) => String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -67,6 +75,7 @@ export function applyPalette(palette, extra = {}, root = document.documentElemen
       if (c) { root.style.setProperty(cssVar, c); n++; break; }
     }
   }
+  for (const [k, c] of Object.entries(UI_CALM)) { root.style.setProperty(k, c); n++; }
   for (const [k, c] of flat) root.style.setProperty('--pal-' + k, c);
   for (const [prefix, map] of [['--lab-', extra.providers], ['--role-', extra.roles], ['--dom-', extra.domains]]) {
     if (!map || typeof map !== 'object') continue;

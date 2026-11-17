@@ -9,7 +9,7 @@ import * as ui from '../lib/widgets.js';
 const fmt = ui.fmt;
 
 // What the owner changed but did not save stays while the drawer is closed: path -> value.
-const keep = { draft: new Map(), advanced: false };
+const keep = { draft: new Map(), advanced: false, limitsOpen: false };
 let view = null;
 
 const get = (obj, path) => path.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), obj);
@@ -190,7 +190,7 @@ function limitsSection(ctx) {
     num(ctx, 'limits.rotateGapMin', 'Idle gap', { min: 1, max: 600, unit: 'minutes', hint: 'A boss or manager that sat idle this long starts fresh...' }),
     num(ctx, 'limits.rotateGapTok', '...when its context is over', { min: 1000, max: 2000000, step: 1000, unit: 'tokens' })), { open: true, onToggle: (v) => { keep.advanced = v; } });
   adv.setOpen(keep.advanced); // built at once (its fields must exist to be saved), shown only when the owner opened it
-  return ui.section('Limits',
+  const fold = ui.fold('Show 22 advanced concurrency, retry & timeout limits', () => [
     h('div.caps.st-sub', 'Agents at work at once'),
     grid(num(ctx, 'limits.maxAgents', 'All labs', { min: 1, max: 14, hint: 'Turns that run at the same time.' }),
       per.map((p) => num(ctx, `limits.perProvider.${p}`, `Lab ${p}`, { min: 0, max: 14 }))),
@@ -208,7 +208,10 @@ function limitsSection(ctx) {
     h('div.caps.st-sub', 'Size of a hand-in, and cost of a turn'),
     grid(num(ctx, 'limits.maxFileMb', 'One file', { min: 0.1, max: 1000, step: 0.1, int: false, unit: 'MB' }), num(ctx, 'limits.maxDeliveryMb', 'One hand-in', { min: 0.1, max: 5000, step: 0.1, int: false, unit: 'MB' }),
       num(ctx, 'limits.maxDeliveryFiles', 'Files in a hand-in', { min: 1, max: 100000 }), num(ctx, 'limits.turnUsd', 'One turn', { min: 0.1, max: 1000, step: 0.1, int: false, unit: 'USD', hint: 'API key mode only.' })),
-    adv);
+    adv,
+  ], { open: true, onToggle: (v) => { keep.limitsOpen = v; } });
+  fold.setOpen(keep.limitsOpen);
+  return ui.section('Advanced limits', fold);
 }
 
 // ------------------------------------------------------------------ save bar

@@ -14,6 +14,8 @@ const enc = encodeURIComponent;
 const LOG_CAP = 2000;
 const STATUS_WORD = { thinking: 'Thinking', working: 'Working', waiting: 'Waiting', reviewing: 'Reviewing', blocked: 'Blocked', idle: 'Idle', off: 'Off' };
 const ROLE_WORD = { boss: 'Orchestration Officer', manager: 'Team Lead', maker: 'Specialist' };
+const CERT_LABEL = { curated: 'Certified', training_queued: 'Queued for RFT', base_untrained: 'Base model' };
+const REQ_STATUS = { queued_phase1: 'Queued', enrolled: 'Enrolled', dismissed: 'Dismissed' };
 const BUSY = new Set(['thinking', 'working', 'reviewing']);
 
 const keep = { offOpen: false };
@@ -88,8 +90,8 @@ function tick(ctx, a) {
     mail ? ui.chip(`${mail} open`, 'amber', { title: `${fmt.plural(mail, 'open board item')} that this agent must answer` }) : null,
     asksYou ? h('button.cw-asks', { type: 'button', title: `${a.name} asked you a question. Answer it in the Inbox.`, onclick: () => ctx.openPanel('inbox') }, 'asks you') : null]);
   part(live.tags, [a.role, a.lead, a.provider, a.modelLabel || a.model, a.effort, a.harnessId, a.certification].join('|'), () => [roleChip(a), ui.labChip(a.provider, a.modelLabel || a.model || a.provider),
-    a.harnessId ? ui.chip(`rack: ${a.harnessId}`, 'green') : null,
-    a.certification && a.certification !== 'curated' ? ui.chip(a.certification, 'amber') : null,
+    a.harnessId ? ui.chip(`harness: ${a.harnessId}`, 'plain') : null,
+    a.certification && a.certification !== 'curated' ? ui.chip(CERT_LABEL[a.certification] || a.certification, 'amber') : null,
     a.effort ? h('span.dim', { title: 'Reasoning effort of the model' }, a.effort) : null]);
   const bars = a.role === 'maker' && !!x && ['working', 'rework'].includes(x.t.status);
   part(live.task, x ? [x.t.id, x.t.title, x.verb, bars].join('|') : 'none:' + a.status, () => {
@@ -320,8 +322,8 @@ function refreshDetail(ctx) {
     h('div.cw-main',
       h('div.cw-top', h('span.cw-bigname', String(a.name || a.id)), h('span.cw-handle', String(a.handle || '')), statusChip(ctx, a)),
       h('div.cw-tags', roleChip(a), ui.labChip(a.provider, a.provider), h('span', String(a.modelLabel || a.model || '')),
-        a.harnessId ? ui.chip(`rack: ${a.harnessId}`, 'green') : null,
-        a.certification ? ui.chip(a.certification, a.certification === 'curated' ? 'blue' : 'amber') : null,
+        a.harnessId ? ui.chip(`harness: ${a.harnessId}`, 'plain') : null,
+        a.certification ? ui.chip(CERT_LABEL[a.certification] || a.certification, a.certification === 'curated' ? 'green' : 'amber') : null,
         a.effort ? h('span.dim', `effort ${a.effort}`) : null),
       hold ? h('p.cw-hold', `On hold: the runtime ${hold.provider || a.provider} is not usable right now${hold.until ? `. The hub tries again about ${fmt.time(hold.until)}` : ''}.`) : null)));
 
@@ -430,9 +432,7 @@ function drawRoster(ctx) {
   if (view.rosterSig === sig) return;
   view.rosterSig = sig;
   mount(view.rosterBox,
-    h('div.tw-head',
-      h('div.tw-title', h('h3.wo-title', 'Employee Book'), ui.btn('+ New Specialist', { small: true, tone: 'go', onClick: () => editRosterModal(ctx, null) })),
-      h('p.dim', `Catalog of ${fmt.plural(entries.length, 'named specialist & team lead')}. Gemini orchestrators match tasks to certified entries here, or queue uncurated domains for Phase 1 RFT.`)),
+    h('p.panel-lead', `${fmt.plural(entries.length, 'named specialist & team lead')}. Officers match tasks to certified entries here, or queue gaps for Phase 1 RFT.`),
     entries.length ? h('div.ro-list', entries.map((e) => {
       const spriteAgent = { name: e.name, role: e.role, provider: 'oss', style: e.style || { seed: 2100 } };
       const cls = e.certification === 'curated' ? 'is-curated' : e.certification === 'training_queued' ? 'is-rft' : 'is-base';
@@ -447,13 +447,13 @@ function drawRoster(ctx) {
             h('span.strong', String(e.name)),
             h('span.dim', String(e.title || '')),
             ui.chip(e.role === 'manager' ? 'Team Lead' : 'Specialist', 'plain'),
-            ui.chip(e.certification, tone),
-            !e.enabled ? ui.chip('disabled', 'steel') : null),
+            ui.chip(CERT_LABEL[e.certification] || String(e.certification || 'Base model'), tone),
+            !e.enabled ? ui.chip('Disabled', 'steel') : null),
           h('div.hr-meta',
             ui.labChip('oss', e.baseModel),
-            ui.chip(`rack: ${e.harnessId}`, 'green'),
+            ui.chip(`harness: ${e.harnessId}`, 'plain'),
             ...(e.specialties || []).map((d) => ui.domainChip(d))),
-          h('div.ro-stats', `ID: ${e.id} · Completed: ${rec.tasksCompleted || 0} · Reworks: ${rec.reworks || 0} · First-pass: ${firstPass}${e.checkpoint ? ` · Checkpoint: ${e.checkpoint}` : ''}`),
+          h('div.ro-stats', `Done: ${rec.tasksCompleted || 0} · Reworks: ${rec.reworks || 0} · First-pass: ${firstPass}${e.checkpoint ? ` · Checkpoint: ${e.checkpoint}` : ''}`),
           h('div.ro-acts', ui.btn('Edit', { small: true, onClick: () => editRosterModal(ctx, e) }))));
     })) : ui.emptyState('Employee Book is empty', 'Add specialist characters to assign open-weight models and harnesses.', ui.btn('+ New Specialist', { tone: 'go', onClick: () => editRosterModal(ctx, null) })));
 }
@@ -475,7 +475,7 @@ function enrollModal(ctx, r) {
       const [reqList, rosList] = await Promise.all([ctx.api.get('/api/requisitions', { quiet: true }), ctx.api.get('/api/roster', { quiet: true })]);
       if (reqList) ctx.store.set('requisitions', reqList);
       if (rosList) ctx.store.set('roster', rosList);
-      ctx.toast(`${fName.value.trim() || r.suggestedName} enrolled as curated specialist!`);
+      ctx.toast(`${fName.value.trim() || r.suggestedName} enrolled as certified specialist!`);
       return true;
     } }] });
 }
@@ -488,23 +488,23 @@ function drawRft(ctx) {
   view.rftSig = sig;
   const queued = list.filter((r) => r.status === 'queued_phase1').length;
   mount(view.rftBox,
-    h('div.tw-head',
-      h('div.tw-title', h('h3.wo-title', 'Phase 1 RFT Training Queue'), ui.chip(`${queued} queued`, queued ? 'amber' : 'green')),
-      h('p.dim', 'When an orchestration task needs a domain lacking a curated specialist in the Employee Book, Phase 0 runs a local OSS fallback and logs a Phase 1 RL/RFT training spec here.')),
+    h('div.row.between', { style: { marginBottom: '12px' } },
+      h('p.panel-lead', { style: { margin: 0, flex: '1 1 240px' } }, 'When a task needs a specialty not yet certified in the Employee Book, Phase 0 runs an OSS base model today and logs a Phase 1 training spec here.'),
+      ui.chip(`${queued} queued`, queued ? 'amber' : 'green')),
     list.length ? h('div.ro-list', list.map((r) => {
       const spec = r.rftSpec || {};
       const rewards = Array.isArray(spec.rewardSignals) ? spec.rewardSignals : [];
       return h('article', { class: ['rft-card', r.status === 'enrolled' && 'is-done'], dataset: { requisition: r.id } },
         h('div.ro-head',
           ui.chip(r.id, 'dark'),
-          ui.chip(r.status, r.status === 'queued_phase1' ? 'amber' : r.status === 'enrolled' ? 'green' : 'steel'),
+          ui.chip(REQ_STATUS[r.status] || r.status, r.status === 'queued_phase1' ? 'amber' : r.status === 'enrolled' ? 'green' : 'steel'),
           ui.domainChip(r.domain),
           h('span.strong', String(r.suggestedName || r.domain)),
           r.jobId ? ui.chip(String(r.jobId), 'plain') : null),
-        h('p', String(r.notes || `Reason: ${r.reason}`)),
+        h('p', { style: { margin: 0 } }, String(r.notes || `Reason: ${r.reason}`)),
         h('div.hr-meta',
           ui.labChip('oss', r.candidateBaseModel || 'oss'),
-          ui.chip(`rack: ${r.harnessId}`, 'green'),
+          ui.chip(`harness: ${r.harnessId}`, 'plain'),
           r.enrolledRosterId ? ui.chip(`enrolled: ${r.enrolledRosterId}`, 'blue') : null),
         spec.evalSuite || rewards.length ? ui.fold('Phase 1 RL/RFT spec', () => [
           spec.evalSuite ? h('p', 'Eval suite: ', h('span.code', String(spec.evalSuite))) : null,
@@ -520,7 +520,7 @@ function drawRft(ctx) {
               ctx.toast(`${r.id} dismissed.`);
             }
           } })) : null);
-    })) : ui.emptyState('RFT Queue is clean', 'Every specialist domain requested so far has a curated entry or no gaps have been queued yet.'));
+    })) : ui.emptyState('RFT Queue is clean', 'Every specialist domain requested so far has a certified entry or no gaps have been queued yet.'));
 }
 
 // ------------------------------------------------------------------ panel
@@ -536,11 +536,13 @@ function render(container, ctx) {
     return;
   }
   const tab = ['team', 'roster', 'rft'].includes(ctx.params.tab) ? ctx.params.tab : 'team';
-  const tabs = h('div.panel-tabs', ui.segmented([
-    { value: 'team', label: 'Active Team', title: 'Live orchestration officers, team leads, and bench specialists' },
-    { value: 'roster', label: `Employee Book (${roster.length})`, title: 'Persistent catalog of named specialist characters' },
-    { value: 'rft', label: `RFT Queue (${queued})`, title: 'Phase 1 reinforcement fine-tuning requisitions' },
-  ], tab, (v) => ctx.setParams({ tab: v, agent: null })));
+  const tabs = h('div.panel-tabs',
+    ui.segmented([
+      { value: 'team', label: 'Active Team', title: 'Live orchestration officers, team leads, and bench specialists' },
+      { value: 'roster', label: `Employee Book (${roster.length})`, title: 'Persistent catalog of named specialist characters' },
+      { value: 'rft', label: `RFT Queue (${queued})`, title: 'Phase 1 reinforcement fine-tuning requisitions' },
+    ], tab, (v) => ctx.setParams({ tab: v, agent: null })),
+    tab === 'roster' ? ui.btn('+ New Specialist', { small: true, tone: 'go', onClick: () => editRosterModal(ctx, null) }) : null);
 
   view = { container, live: new Map(), shape: null, sum: h('div'), box: h('div.cw-tree'), rosterBox: h('div'), rftBox: h('div'), rosterSig: null, rftSig: null, detail: null, mode: tab, tab, jobId: job ? job.id : null };
   container.append(tabs);

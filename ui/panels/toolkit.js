@@ -303,15 +303,16 @@ function drawTools(ctx) {
     view.headSig = headSig;
     const pick = projects.length > 1 ? ui.select(projects.map((p) => ({ value: p.id, label: `${p.name} (${p.id})` })), project ? project.id : '', { 'aria-label': 'Project', onchange: () => { keep.projectId = pick.select.value; drawTools(ctx); load(ctx); } }) : null;
     mount(view.head, project ? [
-      h('div.tw-title', h('h3.wo-title', 'Tool wall'), pick ? h('div.tw-pick', pick) : ui.chip(String(project.name), 'dark')),
-      h('p.dim', 'One-click tools for ', h('span.strong', String(project.name)), '. Only you run them: agents never get these tools.')] : null);
+      h('div.tw-title',
+        h('p.panel-lead', { style: { margin: 0 } }, 'One-click shortcuts for ', h('span.strong', String(project.name)), '.'),
+        pick ? h('div.tw-pick', pick) : ui.chip(String(project.name), 'plain'))] : null);
   }
   const tools = project ? toolsOf(project.id) : null;
   const state = !project ? 'none' : tools ? 'ok' : view.error ? 'err:' + view.error : 'wait';
   if (view.state !== state) {
     view.state = state;
-    mount(view.note, !project ? ui.emptyState('No tool wall yet', 'The tools belong to a project. Start a work order first: its project gets a tool wall.', ui.btn('+ Work order', { tone: 'go', onClick: () => ctx.openPanel('workorder') }))
-      : tools ? null : view.error ? h('div.callout.bad', h('div.callout-title', 'The tools did not load'), h('p', String(view.error)), ui.btn('Try again', { small: true, onClick: () => load(ctx) })) : h('p.dim', 'Loading the tools...'));
+    mount(view.note, !project ? ui.emptyState('No project tools yet', 'Tools belong to a project. Start a work order first to set up its tool wall.', ui.btn('+ Work order', { tone: 'go', onClick: () => ctx.openPanel('workorder') }))
+      : tools ? null : view.error ? h('div.callout.bad', h('div.callout-title', 'The tools did not load'), h('p', String(view.error)), ui.btn('Try again', { small: true, onClick: () => load(ctx) })) : h('p.dim', 'Loading tools...'));
   }
   view.grid.hidden = !tools;
   if (!tools) return;
@@ -331,68 +332,69 @@ async function load(ctx) {
   drawTools(ctx);
 }
 
+function editHarnessModal(ctx, harnesses, item) {
+  const existing = item || {
+    id: '', label: '', summary: '', roleHint: 'maker', domains: ['backend'], platforms: ['node'],
+    tools: ['read_file', 'write_file', 'edit_file', 'list_dir', 'search_text', 'run_shell', 'shop_mcp'],
+    protocol: { workflow: ['Inspect callers first.', 'Run checks before DONE.'], systemPromptAddon: '' },
+    rft: { status: 'phase1_ready', rewardSignals: ['check_cmd_exit_zero', 'diff_minimality'], evalSuite: 'suites/custom-v0', notes: '' },
+  };
+  const fId = h('input', { type: 'text', value: String(existing.id || ''), placeholder: 'custom-rig', readOnly: !!item });
+  const fLabel = h('input', { type: 'text', value: String(existing.label || ''), placeholder: 'Custom Specialist Rig' });
+  const fRole = ui.select([{ value: 'maker', label: 'Specialist (maker)' }, { value: 'manager', label: 'Team Lead (manager)' }], existing.roleHint || 'maker');
+  const fDom = h('input', { type: 'text', value: (existing.domains || []).join(', '), placeholder: 'backend, fix' });
+  const fTools = h('input', { type: 'text', value: (existing.tools || []).join(', '), placeholder: 'read_file, write_file, edit_file, list_dir, search_text, run_shell, shop_mcp' });
+  const fSum = h('textarea', { rows: 2, value: String(existing.summary || ''), placeholder: 'What this harness equips a specialist to do.' });
+  const fPrompt = h('textarea', { rows: 3, value: String((existing.protocol && existing.protocol.systemPromptAddon) || ''), placeholder: 'System prompt addendum injected into .shop/HARNESS.md' });
+  const fEval = h('input', { type: 'text', value: String((existing.rft && existing.rft.evalSuite) || 'suites/custom-v0') });
+  const fields = { id: ui.field('Id', fId), label: ui.field('Label', fLabel), role: ui.field('Role', fRole), dom: ui.field('Domains (comma-separated)', fDom), tools: ui.field('Tools', fTools), sum: ui.field('Summary', fSum), prompt: ui.field('Prompt addendum', fPrompt), evalSuite: ui.field('Phase 1 Eval Suite', fEval) };
+  const splitCsv = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const buttons = [];
+  if (item && harnesses.length > 1) buttons.push({ label: 'Delete', tone: 'danger', run: async () => {
+    if (!(await ctx.confirm({ title: `Remove "${item.label}"?`, text: 'Remove this harness from the rack?', okLabel: 'Remove', danger: true }))) return false;
+    const res = await ctx.api.del(`/api/harnesses/${enc(item.id)}`);
+    if (!res) return false;
+    const fresh = await ctx.api.get('/api/harnesses', { quiet: true });
+    if (fresh) ctx.store.set('harnesses', fresh);
+    ctx.toast(`${item.label} removed from rack.`);
+    return true;
+  } });
+  buttons.push({ label: 'Cancel', value: false }, { label: item ? 'Save harness' : 'Add to rack', primary: true, run: async () => {
+    const payload = {
+      ...existing,
+      id: fId.value.trim(),
+      label: fLabel.value.trim(),
+      roleHint: fRole.select.value,
+      summary: fSum.value.trim(),
+      domains: splitCsv(fDom.value),
+      tools: splitCsv(fTools.value),
+      protocol: { ...(existing.protocol || {}), workflow: (existing.protocol && existing.protocol.workflow) || ['Run checks before DONE.'], systemPromptAddon: fPrompt.value.trim() },
+      rft: { ...(existing.rft || {}), status: (existing.rft && existing.rft.status) || 'phase1_ready', evalSuite: fEval.value.trim() },
+    };
+    const res = await ctx.api.post('/api/harnesses', payload);
+    if (!res) return false;
+    const fresh = await ctx.api.get('/api/harnesses', { quiet: true });
+    if (fresh) ctx.store.set('harnesses', fresh);
+    ctx.toast(`${payload.label} saved to rack.`);
+    return true;
+  } });
+  ctx.modal({ title: item ? `Edit harness: ${item.label}` : 'Add harness to rack', wide: true, buttons,
+    body: h('div.tw-form', fields.id, fields.label, fields.role, fields.dom, fields.sum, fields.tools, fields.prompt, fields.evalSuite) });
+}
+
 function drawRack(ctx) {
   if (!view || !view.rackBox) return;
   const harnesses = Array.isArray(ctx.store.harnesses) ? ctx.store.harnesses : [];
   const sig = JSON.stringify(harnesses);
   if (view.rackSig === sig) return;
   view.rackSig = sig;
-  const openEdit = (item) => {
-    const existing = item || {
-      id: '', label: '', summary: '', roleHint: 'maker', domains: ['backend'], platforms: ['node'],
-      tools: ['read_file', 'write_file', 'edit_file', 'list_dir', 'search_text', 'run_shell', 'shop_mcp'],
-      protocol: { workflow: ['Inspect callers first.', 'Run checks before DONE.'], systemPromptAddon: '' },
-      rft: { status: 'phase1_ready', rewardSignals: ['check_cmd_exit_zero', 'diff_minimality'], evalSuite: 'suites/custom-v0', notes: '' },
-    };
-    const fId = h('input', { type: 'text', value: String(existing.id || ''), placeholder: 'custom-rig', readOnly: !!item });
-    const fLabel = h('input', { type: 'text', value: String(existing.label || ''), placeholder: 'Custom Specialist Rig' });
-    const fRole = ui.select([{ value: 'maker', label: 'Specialist (maker)' }, { value: 'manager', label: 'Team Lead (manager)' }], existing.roleHint || 'maker');
-    const fDom = h('input', { type: 'text', value: (existing.domains || []).join(', '), placeholder: 'backend, fix' });
-    const fTools = h('input', { type: 'text', value: (existing.tools || []).join(', '), placeholder: 'read_file, write_file, edit_file, list_dir, search_text, run_shell, shop_mcp' });
-    const fSum = h('textarea', { rows: 2, value: String(existing.summary || ''), placeholder: 'What this harness equips a specialist to do.' });
-    const fPrompt = h('textarea', { rows: 3, value: String((existing.protocol && existing.protocol.systemPromptAddon) || ''), placeholder: 'System prompt addendum injected into .shop/HARNESS.md' });
-    const fEval = h('input', { type: 'text', value: String((existing.rft && existing.rft.evalSuite) || 'suites/custom-v0') });
-    const fields = { id: ui.field('Id', fId), label: ui.field('Label', fLabel), role: ui.field('Role', fRole), dom: ui.field('Domains (comma-separated)', fDom), tools: ui.field('Tools', fTools), sum: ui.field('Summary', fSum), prompt: ui.field('Prompt addendum', fPrompt), evalSuite: ui.field('Phase 1 Eval Suite', fEval) };
-    const splitCsv = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
-    const buttons = [];
-    if (item && harnesses.length > 1) buttons.push({ label: 'Delete', tone: 'danger', run: async () => {
-      if (!(await ctx.confirm({ title: `Remove "${item.label}"?`, text: 'Remove this harness from the rack?', okLabel: 'Remove', danger: true }))) return false;
-      const res = await ctx.api.del(`/api/harnesses/${enc(item.id)}`);
-      if (!res) return false;
-      const fresh = await ctx.api.get('/api/harnesses', { quiet: true });
-      if (fresh) ctx.store.set('harnesses', fresh);
-      ctx.toast(`${item.label} removed from rack.`);
-      return true;
-    } });
-    buttons.push({ label: 'Cancel', value: false }, { label: item ? 'Save harness' : 'Add to rack', primary: true, run: async () => {
-      const payload = {
-        ...existing,
-        id: fId.value.trim(),
-        label: fLabel.value.trim(),
-        roleHint: fRole.select.value,
-        summary: fSum.value.trim(),
-        domains: splitCsv(fDom.value),
-        tools: splitCsv(fTools.value),
-        protocol: { ...(existing.protocol || {}), workflow: (existing.protocol && existing.protocol.workflow) || ['Run checks before DONE.'], systemPromptAddon: fPrompt.value.trim() },
-        rft: { ...(existing.rft || {}), status: (existing.rft && existing.rft.status) || 'phase1_ready', evalSuite: fEval.value.trim() },
-      };
-      const res = await ctx.api.post('/api/harnesses', payload);
-      if (!res) return false;
-      const fresh = await ctx.api.get('/api/harnesses', { quiet: true });
-      if (fresh) ctx.store.set('harnesses', fresh);
-      ctx.toast(`${payload.label} saved to rack.`);
-      return true;
-    } });
-    ctx.modal({ title: item ? `Edit harness: ${item.label}` : 'Add harness to rack', wide: true, buttons,
-      body: h('div.tw-form', fields.id, fields.label, fields.role, fields.dom, fields.sum, fields.tools, fields.prompt, fields.evalSuite) });
-  };
   const preview = (item) => {
     const wf = (item.protocol && item.protocol.workflow) || [];
     const rewards = (item.rft && item.rft.rewardSignals) || [];
     ctx.modal({ title: `.shop/HARNESS.md · ${item.label}`, wide: true, buttons: [{ label: 'Close', primary: true, tone: 'steel' }],
       body: h('div.stack',
         h('p', String(item.summary || '')),
-        h('div.hr-meta', ui.chip(item.id, 'dark'), ui.chip(item.roleHint || 'maker', 'plain'), ...(item.domains || []).map((d) => ui.domainChip(d))),
+        h('div.hr-meta', ui.chip(item.id, 'dark'), ui.chip(item.roleHint === 'manager' ? 'Team Lead' : 'Specialist', 'plain'), ...(item.domains || []).map((d) => ui.domainChip(d))),
         item.protocol && item.protocol.systemPromptAddon ? h('pre.term', String(item.protocol.systemPromptAddon)) : null,
         wf.length ? [h('div.caps', 'Workflow'), h('ul.list', wf.map((s) => h('li.li', String(s))))] : null,
         h('div.caps', 'Tools'),
@@ -402,28 +404,31 @@ function drawRack(ctx) {
   };
   const iconFor = { backend: 'wrench', fix: 'bug', frontend: 'star', test: 'gauge', data: 'search', algo: 'bolt', research: 'book', plan: 'clipboard' };
   mount(view.rackBox,
-    h('div.tw-head',
-      h('div.tw-title', h('h3.wo-title', 'Harness Rack'), ui.btn('+ New harness', { small: true, tone: 'go', onClick: () => openEdit(null) })),
-      h('p.dim', 'Modular open-weight specialist rigs. Injected as ', h('span.code', '.shop/HARNESS.md'), ' into task benches and paired with Phase 1 RFT reward specs.')),
+    h('p.panel-lead', 'Open-weight specialist rigs injected as ', h('span.code', '.shop/HARNESS.md'), ' into task benches and paired with Phase 1 RFT reward specs.'),
     harnesses.length ? h('div.hr-grid', harnesses.map((item) => {
       const firstDom = (item.domains || [])[0];
+      const toolsCount = Array.isArray(item.tools) ? item.tools.length : 0;
       return h('article.hr-card', { dataset: { harness: item.id } },
         h('div.hr-cardhead', iconEl(iconFor[firstDom] || 'wrench', item.label),
-          h('div', h('div.strong', String(item.label || item.id)), h('div.dim', `${item.id} · ${item.roleHint || 'maker'}`))),
-        h('p', String(item.summary || '')),
-        h('div.hr-meta', ...(item.domains || []).map((d) => ui.domainChip(d)), ...(item.tools || []).slice(0, 4).map((t) => ui.chip(String(t), 'plain'))),
-        item.rft ? h('div.dim', `Phase 1 suite: ${item.rft.evalSuite || 'phase1'}`) : null,
-        h('div.hr-acts', ui.btn('Inspect', { small: true, onClick: () => preview(item) }), ui.btn('Edit', { small: true, onClick: () => openEdit(item) })));
+          h('div.hr-cardhead-main',
+            h('span.strong', String(item.label || item.id)),
+            ui.chip(item.roleHint === 'manager' ? 'Team Lead' : 'Specialist', 'plain'))),
+        h('p.hr-summary', String(item.summary || '')),
+        (item.domains || []).length ? h('div.hr-meta', ...(item.domains || []).map((d) => ui.domainChip(d))) : null,
+        h('div.dim', `${fmt.plural(toolsCount, 'tool')} · ${item.id}`),
+        h('div.hr-acts', ui.btn('Inspect', { small: true, onClick: () => preview(item) }), ui.btn('Edit', { small: true, onClick: () => editHarnessModal(ctx, harnesses, item) })));
     })) : ui.emptyState('Harness Rack is empty', 'Add a specialist harness rig to inject tools and protocols into open-weight benches.'));
 }
 
 function render(container, ctx) {
   if (!keep.wired) { keep.wired = true; ctx.store.on('toolrun', onRun); } // once per window: a run goes on while the drawer is closed
   const tab = ctx.params.tab === 'tools' ? 'tools' : 'rack';
-  const tabs = h('div.panel-tabs', ui.segmented([
-    { value: 'rack', label: 'Harness Rack', title: 'Specialist rigs injected as .shop/HARNESS.md' },
-    { value: 'tools', label: 'Project Tools', title: 'Per-project shell commands, saved orders, and board asks' },
-  ], tab, (v) => ctx.setParams({ tab: v })));
+  const tabs = h('div.panel-tabs',
+    ui.segmented([
+      { value: 'rack', label: 'Harness Rack', title: 'Specialist rigs injected as .shop/HARNESS.md' },
+      { value: 'tools', label: 'Project Tools', title: 'Per-project shell commands, saved orders, and board asks' },
+    ], tab, (v) => ctx.setParams({ tab: v })),
+    tab === 'rack' ? ui.btn('+ New harness', { small: true, tone: 'go', onClick: () => editHarnessModal(ctx, Array.isArray(ctx.store.harnesses) ? ctx.store.harnesses : [], null) }) : null);
   view = { tab, head: h('div.tw-head'), note: h('div'), grid: h('div.tw-grid', { hidden: true }), runs: h('div.tw-log'), rackBox: h('div'), rackSig: null, headSig: null, state: null, runSig: null, runList: null, error: null };
   container.append(tabs);
   if (tab === 'rack') {

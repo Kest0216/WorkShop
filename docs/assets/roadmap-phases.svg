@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 280" width="980" height="280" role="img" aria-labelledby="title desc">
+  <title id="title">WorkShop Phases 0 to 3 Roadmap</title>
+  <desc id="desc">Four-stage roadmap from Phase 0 local scaffolding live today, to Phase 1 automated RL fine-tuning, Phase 2 specialized harnesses, and Phase 3 closed-loop self-improving specialist teams.</desc>
+  <defs>
+    <style>
+      .bg { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .flow { stroke-dasharray: 6 6; animation: dash 1.8s linear infinite; }
+      @keyframes dash { to { stroke-dashoffset: -24; } }
+      @media (prefers-reduced-motion: reduce) {
+        .flow { animation: none; }
+      }
+    </style>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1e2538" stroke-width="1"/>
+    </pattern>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <g class="bg">
+    <rect x="0" y="0" width="980" height="280" rx="16" fill="#141824"/>
+    <rect x="0" y="0" width="980" height="280" rx="16" fill="url(#grid)" opacity="0.6"/>
+    <rect x="1" y="1" width="978" height="278" rx="15" fill="none" stroke="#2c3550" stroke-width="2"/>
+
+    <text x="32" y="38" font-size="18" font-weight="700" fill="#f8f6f0">Where WorkShop Is Going: Phases 0 to 3</text>
+    <text x="32" y="58" font-size="12.5" fill="#9fb0d0">Phase 0 builds the shop floor and hooks locally today; Phases 1–3 plug in GPU training and deeper toolkits next</text>
+
+    <!-- Phase 0 -->
+    <rect x="32" y="82" width="210" height="170" rx="10" fill="#1d2335" stroke="#5bd475" stroke-width="2"/>
+    <rect x="44" y="94" width="112" height="19" rx="4" fill="#173326"/>
+    <text x="100" y="107" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5bd475">PHASE 0 · LIVE NOW</text>
+    <text x="44" y="132" font-size="14" font-weight="700" fill="#f8f6f0">Local Shop Floor</text>
+    <text x="44" y="155" font-size="12" fill="#cbd5e1">• Frontier officers (API keys)</text>
+    <text x="44" y="175" font-size="12" fill="#cbd5e1">• $0 OSS teams &amp; Stand-in</text>
+    <text x="44" y="195" font-size="12" fill="#cbd5e1">• Harness Rack + Book UI</text>
+    <text x="44" y="215" font-size="12" fill="#cbd5e1">• Auto-tests &amp; RFT queue</text>
+    <text x="44" y="238" font-size="11" fill="#7ce896">Works on any Mac today</text>
+
+    <line x1="242" y1="167" x2="262" y2="167" stroke="#94a3b8" stroke-width="2" class="flow" marker-end="url(#arr)"/>
+
+    <!-- Phase 1 -->
+    <rect x="266" y="82" width="210" height="170" rx="10" fill="#1d2335" stroke="#f5c04e" stroke-width="1.8"/>
+    <rect x="278" y="94" width="112" height="19" rx="4" fill="#3a2f15"/>
+    <text x="334" y="107" text-anchor="middle" font-size="10.5" font-weight="700" fill="#f5c04e">PHASE 1 · RL / GPU</text>
+    <text x="278" y="132" font-size="14" font-weight="700" fill="#f8f6f0">Auto RFT Pipeline</text>
+    <text x="278" y="155" font-size="12" fill="#cbd5e1">• Reads RFT Queue specs</text>
+    <text x="278" y="175" font-size="12" fill="#cbd5e1">• Trains open models w/ RL</text>
+    <text x="278" y="195" font-size="12" fill="#cbd5e1">• Auto-tests grade rollouts</text>
+    <text x="278" y="215" font-size="12" fill="#cbd5e1">• Promotes passed weights</text>
+    <text x="278" y="238" font-size="11" fill="#f5c04e">Connects to cluster GPUs</text>
+
+    <line x1="476" y1="167" x2="496" y2="167" stroke="#94a3b8" stroke-width="2" class="flow" marker-end="url(#arr)"/>
+
+    <!-- Phase 2 -->
+    <rect x="500" y="82" width="210" height="170" rx="10" fill="#1d2335" stroke="#7aaeff" stroke-width="1.8"/>
+    <rect x="512" y="94" width="122" height="19" rx="4" fill="#192d4d"/>
+    <text x="573" y="107" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7aaeff">PHASE 2 · TOOLING</text>
+    <text x="512" y="132" font-size="14" font-weight="700" fill="#f8f6f0">Deep Stack Harnesses</text>
+    <text x="512" y="155" font-size="12" fill="#cbd5e1">• Domain-specific toolkits</text>
+    <text x="512" y="175" font-size="12" fill="#cbd5e1">• Swift, Rust, SQL, Web QA</text>
+    <text x="512" y="195" font-size="12" fill="#cbd5e1">• Custom eval benchmarks</text>
+    <text x="512" y="215" font-size="12" fill="#cbd5e1">• Tighter reward shaping</text>
+    <text x="512" y="238" font-size="11" fill="#7aaeff">Swappable rigs on the Rack</text>
+
+    <line x1="710" y1="167" x2="730" y2="167" stroke="#94a3b8" stroke-width="2" class="flow" marker-end="url(#arr)"/>
+
+    <!-- Phase 3 -->
+    <rect x="734" y="82" width="214" height="170" rx="10" fill="#1d2335" stroke="#c084fc" stroke-width="1.8"/>
+    <rect x="746" y="94" width="136" height="19" rx="4" fill="#2f224b"/>
+    <text x="814" y="107" text-anchor="middle" font-size="10.5" font-weight="700" fill="#d8b4fe">PHASE 3 · CLOSED LOOP</text>
+    <text x="746" y="132" font-size="14" font-weight="700" fill="#f8f6f0">Self-Improving Shop</text>
+    <text x="746" y="155" font-size="12" fill="#cbd5e1">• New task -&gt; pick specialist</text>
+    <text x="746" y="175" font-size="12" fill="#cbd5e1">• Gap -&gt; train, test &amp; enroll</text>
+    <text x="746" y="195" font-size="12" fill="#cbd5e1">• Surgical team executes</text>
+    <text x="746" y="215" font-size="12" fill="#cbd5e1">• Score merge vs rework rate</text>
+    <text x="746" y="238" font-size="11" fill="#d8b4fe">Full automated feedback</text>
+  </g>
+</svg>
