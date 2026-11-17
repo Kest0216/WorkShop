@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>WorkShop</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <main id="stage" aria-label="Workshop floor"><canvas id="scene" width="480" height="272"></canvas><p id="stage-wait" class="stage-wait" role="status">Opening the shop...</p></main>
+
+    <header id="topbar">
+      <div class="wordmark" aria-label="WorkShop"><span class="logo" aria-hidden="true"></span><span class="wm-a" aria-hidden="true">WORK</span><span class="wm-b" aria-hidden="true">SHOP</span></div>
+      <div id="conn" class="conn" role="status" hidden></div>
+      <div id="jobchip" class="jobchip"></div>
+      <div id="presence" class="presence" role="group" aria-label="Your presence" hidden></div>
+      <div id="labchips" class="labchips" role="group" aria-label="Labs: plan limits" hidden></div>
+      <nav id="nav" aria-label="Panels"></nav>
+    </header>
+
+    <div id="welcome" class="welcome">
+      <div id="hint" class="hint" hidden></div>
+      <div id="strip" class="strip" role="region" aria-label="Lab setup" hidden></div>
+    </div>
+
+    <aside id="drawer" class="drawer" aria-labelledby="drawer-title" hidden>
+      <header class="drawer-head">
+        <h2 id="drawer-title" class="drawer-title" tabindex="-1"></h2>
+        <span class="drawer-clip" aria-hidden="true"></span>
+        <button id="drawer-close" class="drawer-close" type="button" aria-label="Close the panel" title="Close (Esc)">X</button>
+      </header>
+      <div id="drawer-body" class="drawer-body paper"></div>
+    </aside>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <footer id="ticker" class="ticker" aria-label="Latest board posts and notices"></footer>
+    <div id="modals"></div>
+  </div>
+  <noscript>WorkShop needs JavaScript.</noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

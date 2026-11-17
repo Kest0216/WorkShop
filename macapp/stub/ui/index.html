@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The same policy as the real UI: no inline script. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>WorkShop stub page (this title must never reach the window)</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html, body { margin: 0; background: #14192c; color: #d8dee9; font: 13px/1.5 Menlo, Monaco, monospace; }
+    #wrap { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; }
+    /* A low-resolution canvas, scaled up 4x by CSS. This page sets NO image-rendering:
+       crisp pixels must come from the launcher's injected style. */
+    canvas { width: 640px; height: 360px; border: 2px solid #3b4261; background: #000; flex: none; }
+    #side { min-width: 320px; flex: 1; }
+    h1 { font-size: 15px; margin: 0 0 8px; color: #f2c787; }
+    .row { margin: 4px 0; }
+    .k { color: #7aa2f7; }
+    input[type=text] { font: inherit; width: 220px; background: #1f2335; color: #fff; border: 1px solid #3b4261; padding: 3px 6px; }
+    button { font: inherit; margin-right: 6px; }
+    a { color: #7dcfff; margin-right: 12px; }
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="160" height="90"></canvas>
+  <div id="side">
+    <h1>WorkShop stub page</h1>
+    <div class="row"><span class="k">session</span> <span id="sSession">…</span></div>
+    <div class="row"><span class="k">state</span> <span id="sState">…</span></div>
+    <div class="row"><span class="k">SSE</span> <span id="sSse">…</span></div>
+    <div class="row"><span class="k">localStorage</span> <span id="sLs">…</span></div>
+    <div class="row"><span class="k">dialogs</span> <span id="sDlg">–</span></div>
+    <div class="row"><span class="k">upload</span> <span id="sUp">–</span></div>
+    <div class="row"><span class="k">bridge</span> <span id="sBridge">–</span></div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="txt" placeholder="type / paste here">
+      <button id="btnCount">count 0</button>
+    </div>
+    <div class="row">
+      <button id="btnAlert">alert()</button><button id="btnConfirm">confirm()</button><button id="btnPrompt">prompt()</button>
+    </div>
+    <div class="row">
+      <a id="lnkBlankExt" href="https://example.com/?from=workshop-blank" target="_blank">external _blank</a>
+      <a id="lnkBlankSame" href="/sub/page2.html" target="_blank">same-origin _blank</a>
+      <a id="lnkExt" href="https://example.org/?from=workshop-samewindow">external same-window</a>
+    </div>
+    <div class="row">
+      <a id="lnkFile" href="file:///etc/hosts">file: link</a>
+      <a id="lnkMailto" href="mailto:nobody@example.com">mailto: link</a>
+      <a id="lnkFtpBlank" href="ftp://example.com/x" target="_blank">ftp _blank</a>
+    </div>
+    <div class="row"><input type="file" id="file"></div>
+    <div class="row">
+      <a id="lnkDownloadAttr" href="/api/download-sample" download="workshop-attr.txt">download (attribute)</a>
+      <a id="lnkDownloadBlob" href="#">download (blob)</a>
+    </div>
+    <div class="row">
+      <button id="btnNotify">notify</button><button id="btnBadge">badge 3</button><button id="btnPick">pickFolder</button>
+      <button id="btnLive">job live</button><button id="btnIdle">job done</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

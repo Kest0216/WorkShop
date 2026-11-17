@@ -1,0 +1,14 @@
+data/
+projects/
+node_modules/
+.DS_Store
+*.log
+# Owner settings and atomic-save leftovers stay local (git-ignored) so drafts and local prefs are never committed.
+config/settings.json
+config/settings.json.bak
+config/settings.json.*.tmp
+config/*.bak
+config/*.tmp
+macapp/build/
+.shop/
+.agents/

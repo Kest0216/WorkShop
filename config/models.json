@@ -1,0 +1,1516 @@
+{
+  "version": 1,
+  "dataDate": "2026-11-13",
+  "fetchedAt": "2026-11-15",
+  "attribution": {
+    "text": "Data from BenchLM.ai",
+    "url": "https://benchlm.ai",
+    "license": "CC BY-NC 4.0"
+  },
+  "tieNote": "tie = the gap below which two values count as equal. 0-100 scales: 5 (BenchLM 90% ranges are 6 to 13 points wide each side, so a smaller gap is a lean, not a fact). Single benchmarks in percent and Bug Hunt Bench (fixes out of 105) have no published range in the research data, so they use the same 5 as the boards. Elo: 20 (Arena lists confidence ranges of +/-4 to +/-21). AA index: 3 (Claude Fable 5.2 moves 3 points between max and high effort, and the labs were measured at different efforts). Arena Agent net improvement: 5 (max against high effort moves Claude Opus 5.5 by 5 points and Claude Sonnet 5.5 by 8). Coding value index: 0.5 (5 coding points at a $10 output price). Time, cost and speed: 0 (measured values, no band).",
+  "nullNote": "null means that no score was found for that model. It never means zero.",
+  "categories": {
+    "overall": {
+      "label": "Overall",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "BenchLM",
+      "date": "2026-11-13",
+      "board": "overall",
+      "note": "BenchAlign v5.8 blend of eight categories."
+    },
+    "agentic": {
+      "label": "Agentic",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "BenchLM",
+      "date": "2026-11-13",
+      "board": "agentic",
+      "note": "Tool use and long agent runs."
+    },
+    "coding": {
+      "label": "Coding",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "BenchLM",
+      "date": "2026-11-13",
+      "board": "coding",
+      "note": "SWE-bench Pro, DeepSWE, CursorBench 4.0 and eight more."
+    },
+    "reasoning": {
+      "label": "Reasoning",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "BenchLM",
+      "date": "2026-11-13",
+      "board": "reasoning",
+      "note": "CritPt, AA-LCR, MRCRv2, ARC-AGI-2, ARC-AGI-3 and LongBench v2."
+    },
+    "multimodalGrounded": {
+      "label": "Multimodal and Grounded",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "BenchLM",
+      "date": "2026-11-13",
+      "board": "multimodalGrounded",
+      "note": "Preliminary board. No Gemini 4 score yet."
+    },
+    "knowledge": {
+      "label": "Knowledge",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "BenchLM",
+      "date": "2026-11-13",
+      "board": "knowledge",
+      "note": "HLE, AA-Omniscience, MMLU-Pro, GPQA."
+    },
+    "aaIntelligenceIndex": {
+      "label": "AA Intelligence Index v5.0.1",
+      "scale": "index",
+      "tie": 3,
+      "source": "Artificial Analysis",
+      "date": "2026-11-15",
+      "note": "Blend of 9 tests, top value 65. The labs were measured at different efforts."
+    },
+    "arenaAgentNetImprovement": {
+      "label": "Arena Agent net improvement",
+      "scale": "percent",
+      "tie": 5,
+      "source": "Arena",
+      "date": "2026-11-11",
+      "note": "Ranking metric of the Arena Agent board (real agent sessions). The formula is not published."
+    },
+    "cursorBench4": {
+      "label": "CursorBench 4.0",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Cursor via BenchLM",
+      "date": "2026-11-13",
+      "note": "Multi-file agent coding tasks from real Cursor sessions."
+    },
+    "arenaCodingElo": {
+      "label": "Arena Coding Elo",
+      "scale": "elo",
+      "tie": 20,
+      "source": "Arena",
+      "date": "2026-11-11",
+      "note": "Human votes on coding answers in chat."
+    },
+    "terminalBench41": {
+      "label": "Terminal-Bench 4.1",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "tbench.ai via BenchLM",
+      "date": "2026-11-13",
+      "note": "66 terminal tasks, 5 trials each."
+    },
+    "arenaWebDevElo": {
+      "label": "Arena WebDev Elo",
+      "scale": "elo",
+      "tie": 20,
+      "source": "Arena",
+      "date": "2026-11-11",
+      "note": "Human votes on web apps that the models build."
+    },
+    "vibeCodeBench": {
+      "label": "Vibe Code Bench v1.1",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Vals AI via BenchLM",
+      "date": "2026-11-13",
+      "note": "Builds a full web app from a spec. Near its ceiling (87.8 to 93.8)."
+    },
+    "designArenaWebsiteElo": {
+      "label": "Design Arena Website Elo",
+      "scale": "elo",
+      "tie": 20,
+      "source": "Design Arena via BenchLM",
+      "date": "2026-11-13",
+      "note": "Human votes on website design. The source shows no date."
+    },
+    "bugHuntBench": {
+      "label": "Bug Hunt Bench",
+      "scale": "0-105",
+      "tie": 5,
+      "source": "Bug Hunt Bench via BenchLM",
+      "date": "2026-11-13",
+      "note": "Verified fixes of 105 planted bugs. Each model runs in its own agent CLI."
+    },
+    "cweBenchV2": {
+      "label": "CWE-bench v2",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "CWE-bench via BenchLM",
+      "date": "2026-11-13",
+      "note": "Find and patch vulnerabilities. Partial stand-in for code review."
+    },
+    "aaAnalystAgent": {
+      "label": "AA-AnalystAgent",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Artificial Analysis via BenchLM",
+      "date": "2026-11-13",
+      "note": "Spreadsheet and document analysis. It does not test SQL."
+    },
+    "frontierMathT13": {
+      "label": "FrontierMath v2, Tiers 1-3",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Epoch AI via BenchLM",
+      "date": "2026-11-13",
+      "note": "Share of research-level math problems solved."
+    },
+    "frontierMathT4": {
+      "label": "FrontierMath v2, Tier 4",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Epoch AI via BenchLM",
+      "date": "2026-11-13",
+      "note": "Hardest tier. The GPT-6 Astra value is reported by OpenAI."
+    },
+    "arenaSearchElo": {
+      "label": "Arena Search Elo",
+      "scale": "elo",
+      "tie": 20,
+      "source": "Arena",
+      "date": "2026-11-08",
+      "note": "Human votes on search-grounded answers. No Gemini 4 row yet."
+    },
+    "aaLcr": {
+      "label": "AA-LCR",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Artificial Analysis via BenchLM",
+      "date": "2026-11-13",
+      "note": "Long-context reasoning, run independently."
+    },
+    "arenaCreativeWritingElo": {
+      "label": "Arena Creative Writing Elo",
+      "scale": "elo",
+      "tie": 20,
+      "source": "Arena",
+      "date": "2026-11-11",
+      "note": "Human votes on writing. The only signal for docs."
+    },
+    "arenaTextElo": {
+      "label": "Arena Text Elo",
+      "scale": "elo",
+      "tie": 20,
+      "source": "Arena",
+      "date": "2026-11-11",
+      "note": "Human votes on chat answers."
+    },
+    "osworld21Offline": {
+      "label": "OSWorld 2.1 Offline",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Lab-reported via BenchLM",
+      "date": "2026-11-13",
+      "note": "Computer use from screenshots. Each lab measured its own model. The GPT-6 Luna value is from Anthropic."
+    },
+    "chartographyNoTools": {
+      "label": "Chartography (no tools)",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Lab-reported via BenchLM",
+      "date": "2026-11-13",
+      "note": "Chart reading without tools."
+    },
+    "aaMmmuPro": {
+      "label": "AA-MMMU-Pro",
+      "scale": "0-100",
+      "tie": 5,
+      "source": "Artificial Analysis via BenchLM",
+      "date": "2026-11-13",
+      "note": "Image understanding questions."
+    },
+    "arenaVisionElo": {
+      "label": "Arena Vision Elo",
+      "scale": "elo",
+      "tie": 20,
+      "source": "Arena",
+      "date": "2026-11-08",
+      "note": "Human votes on answers about images."
+    },
+    "codingValueIndex": {
+      "label": "Coding value index",
+      "scale": "points per USD",
+      "tie": 0.5,
+      "source": "BenchLM",
+      "date": "2026-11-13",
+      "note": "BenchLM coding score divided by the output price per 1M tokens."
+    },
+    "arenaAgentTimePerTaskMin": {
+      "label": "Arena Agent time per task",
+      "scale": "minutes",
+      "tie": 0,
+      "source": "Arena",
+      "date": "2026-11-11",
+      "lowerIsBetter": true,
+      "note": "Median time of one agent task. Lower is better."
+    },
+    "arenaAgentCostPerTaskUsd": {
+      "label": "Arena Agent cost per task",
+      "scale": "usd",
+      "tie": 0,
+      "source": "Arena",
+      "date": "2026-11-11",
+      "lowerIsBetter": true,
+      "note": "Median cost of one agent task. Lower is better."
+    },
+    "speedTokensPerSecond": {
+      "label": "Output speed",
+      "scale": "tokens per second",
+      "tie": 0,
+      "source": "Artificial Analysis via BenchLM",
+      "date": "2026-11-12",
+      "note": "Median output tokens per second at the effort that Artificial Analysis lists (usually the maximum)."
+    }
+  },
+  "domains": {
+    "plan": {
+      "label": "Planning and architecture",
+      "keys": [
+        "reasoning",
+        "agentic",
+        "aaIntelligenceIndex",
+        "arenaAgentNetImprovement",
+        "overall"
+      ],
+      "note": "No benchmark tests software architecture. Reasoning plus agent success is the closest signal."
+    },
+    "backend": {
+      "label": "Backend code",
+      "keys": [
+        "coding",
+        "cursorBench4",
+        "arenaCodingElo",
+        "terminalBench41",
+        "overall"
+      ],
+      "note": "BenchLM does not split backend from other coding."
+    },
+    "frontend": {
+      "label": "Frontend and UI code",
+      "keys": [
+        "arenaWebDevElo",
+        "vibeCodeBench",
+        "designArenaWebsiteElo",
+        "overall"
+      ],
+      "note": "Arena WebDev separates models better than Vibe Code Bench, which is near its ceiling."
+    },
+    "fix": {
+      "label": "Debugging",
+      "keys": [
+        "bugHuntBench",
+        "coding",
+        "overall"
+      ],
+      "note": "Bug Hunt Bench runs each model in its own agent CLI, as WorkShop does."
+    },
+    "review": {
+      "label": "Code review",
+      "keys": [
+        "coding",
+        "cweBenchV2",
+        "reasoning",
+        "overall"
+      ],
+      "note": "No code-review benchmark exists. The coding board stands in."
+    },
+    "test": {
+      "label": "Tests",
+      "keys": [
+        "coding",
+        "cursorBench4",
+        "terminalBench41",
+        "overall"
+      ],
+      "note": "No test-writing benchmark exists. The coding basket is graded by tests."
+    },
+    "data": {
+      "label": "Data and SQL",
+      "keys": [
+        "aaAnalystAgent",
+        "coding",
+        "overall"
+      ],
+      "note": "AA-AnalystAgent covers spreadsheets and documents, not SQL."
+    },
+    "algo": {
+      "label": "Math and algorithms",
+      "keys": [
+        "frontierMathT13",
+        "frontierMathT4",
+        "reasoning",
+        "overall"
+      ],
+      "note": "The BenchLM math board has no current model, so raw FrontierMath v2 results are used."
+    },
+    "research": {
+      "label": "Web research",
+      "keys": [
+        "agentic",
+        "arenaSearchElo",
+        "overall"
+      ],
+      "note": "Weak stand-in: no web-research test covers Gemini 4 yet."
+    },
+    "synthesis": {
+      "label": "Long-document synthesis",
+      "keys": [
+        "aaLcr",
+        "knowledge",
+        "overall"
+      ],
+      "note": "AA-LCR is the only long-context test run independently on almost all models."
+    },
+    "docs": {
+      "label": "Writing and docs",
+      "keys": [
+        "arenaCreativeWritingElo",
+        "arenaTextElo",
+        "overall"
+      ],
+      "note": "BenchLM has no writing board. Arena human votes are the only signal."
+    },
+    "vision": {
+      "label": "Vision and UI screenshots",
+      "keys": [
+        "osworld21Offline",
+        "multimodalGrounded",
+        "chartographyNoTools",
+        "aaMmmuPro",
+        "arenaVisionElo",
+        "overall"
+      ],
+      "note": "OSWorld is lab-reported. Gemini 4 has no BenchLM multimodal score yet."
+    },
+    "chore": {
+      "label": "Quick mechanical edits",
+      "keys": [
+        "codingValueIndex",
+        "arenaAgentTimePerTaskMin",
+        "arenaAgentCostPerTaskUsd",
+        "speedTokensPerSecond",
+        "coding",
+        "overall"
+      ],
+      "note": "Speed and cost matter more than peak quality here."
+    }
+  },
+  "models": [
+    {
+      "id": "qwen3-coder-32b",
+      "provider": "oss",
+      "label": "Qwen3 Coder 32B",
+      "tiers": [
+        "maker",
+        "manager"
+      ],
+      "power": 4,
+      "price": {
+        "in": 0,
+        "out": 0,
+        "note": "Open-weight local/cluster runtime ($0 API cost)."
+      },
+      "efforts": [],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Primary Open-Source Coding & Frontend Specialist (Phase 0 OSS runtime).",
+      "benchlmSlug": "qwen3-coder-32b",
+      "scores": {
+        "overall": 78.4,
+        "agentic": 76.2,
+        "coding": 81.5,
+        "reasoning": 74.0,
+        "multimodalGrounded": null,
+        "knowledge": 75.5,
+        "aaIntelligenceIndex": 48,
+        "arenaAgentNetImprovement": 12.1,
+        "cursorBench4": 54.0,
+        "arenaCodingElo": 1525,
+        "terminalBench41": 52.0,
+        "arenaWebDevElo": 1685,
+        "vibeCodeBench": 88.0,
+        "designArenaWebsiteElo": 1270,
+        "bugHuntBench": 41.0,
+        "cweBenchV2": 62.0,
+        "aaAnalystAgent": 44.0,
+        "frontierMathT13": 76.0,
+        "frontierMathT4": 52.0,
+        "arenaSearchElo": null,
+        "aaLcr": 76.0,
+        "arenaCreativeWritingElo": 1410,
+        "arenaTextElo": 1450,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 99.0,
+        "arenaAgentTimePerTaskMin": 4.2,
+        "arenaAgentCostPerTaskUsd": 0,
+        "speedTokensPerSecond": 95
+      }
+    },
+    {
+      "id": "deepseek-r1-32b",
+      "provider": "oss",
+      "label": "DeepSeek R1 Distill 32B",
+      "tiers": [
+        "maker",
+        "manager"
+      ],
+      "power": 4,
+      "price": {
+        "in": 0,
+        "out": 0,
+        "note": "Open-weight local/cluster runtime ($0 API cost)."
+      },
+      "efforts": [],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Primary Open-Source Reasoning, Debugging & Algorithm Specialist (Phase 0 OSS runtime).",
+      "benchlmSlug": "deepseek-r1-32b",
+      "scores": {
+        "overall": 77.8,
+        "agentic": 73.5,
+        "coding": 77.2,
+        "reasoning": 84.5,
+        "multimodalGrounded": null,
+        "knowledge": 79.0,
+        "aaIntelligenceIndex": 50,
+        "arenaAgentNetImprovement": 11.4,
+        "cursorBench4": 50.5,
+        "arenaCodingElo": 1518,
+        "terminalBench41": 49.0,
+        "arenaWebDevElo": 1620,
+        "vibeCodeBench": 85.0,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": 46.5,
+        "cweBenchV2": 61.5,
+        "aaAnalystAgent": 49.5,
+        "frontierMathT13": 88.0,
+        "frontierMathT4": 71.0,
+        "arenaSearchElo": null,
+        "aaLcr": 79.0,
+        "arenaCreativeWritingElo": 1405,
+        "arenaTextElo": 1445,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 98.0,
+        "arenaAgentTimePerTaskMin": 5.0,
+        "arenaAgentCostPerTaskUsd": 0,
+        "speedTokensPerSecond": 82
+      }
+    },
+    {
+      "id": "devstral-24b",
+      "provider": "oss",
+      "label": "Devstral Small 24B",
+      "tiers": [
+        "maker"
+      ],
+      "power": 4,
+      "price": {
+        "in": 0,
+        "out": 0,
+        "note": "Open-weight local/cluster runtime ($0 API cost)."
+      },
+      "efforts": [],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Open-Source Verification, Terminal & Test-Fortress Specialist (Phase 0 OSS runtime).",
+      "benchlmSlug": "devstral-24b",
+      "scores": {
+        "overall": 74.5,
+        "agentic": 77.8,
+        "coding": 78.5,
+        "reasoning": 71.0,
+        "multimodalGrounded": null,
+        "knowledge": 70.0,
+        "aaIntelligenceIndex": 45,
+        "arenaAgentNetImprovement": 10.8,
+        "cursorBench4": 52.0,
+        "arenaCodingElo": 1495,
+        "terminalBench41": 56.0,
+        "arenaWebDevElo": 1610,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": 43.0,
+        "cweBenchV2": 64.0,
+        "aaAnalystAgent": null,
+        "frontierMathT13": 68.0,
+        "frontierMathT4": 40.0,
+        "arenaSearchElo": null,
+        "aaLcr": 74.0,
+        "arenaCreativeWritingElo": null,
+        "arenaTextElo": 1410,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 95.0,
+        "arenaAgentTimePerTaskMin": 3.4,
+        "arenaAgentCostPerTaskUsd": 0,
+        "speedTokensPerSecond": 120
+      }
+    },
+    {
+      "id": "llama-4-scout-17b",
+      "provider": "oss",
+      "label": "Llama 4 Scout 17B",
+      "tiers": [
+        "manager",
+        "maker"
+      ],
+      "power": 3,
+      "price": {
+        "in": 0,
+        "out": 0,
+        "note": "Open-weight local/cluster runtime ($0 API cost)."
+      },
+      "efforts": [],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Primary Open-Source Team Lead & Fast Chore Specialist (Phase 0 OSS runtime).",
+      "benchlmSlug": "llama-4-scout-17b",
+      "scores": {
+        "overall": 72.8,
+        "agentic": 71.0,
+        "coding": 71.5,
+        "reasoning": 72.0,
+        "multimodalGrounded": 70.5,
+        "knowledge": 74.0,
+        "aaIntelligenceIndex": 42,
+        "arenaAgentNetImprovement": 8.2,
+        "cursorBench4": 47.0,
+        "arenaCodingElo": 1478,
+        "terminalBench41": 43.0,
+        "arenaWebDevElo": 1590,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": 34.0,
+        "cweBenchV2": 57.0,
+        "aaAnalystAgent": 45.0,
+        "frontierMathT13": 66.0,
+        "frontierMathT4": 35.0,
+        "arenaSearchElo": null,
+        "aaLcr": 77.5,
+        "arenaCreativeWritingElo": 1435,
+        "arenaTextElo": 1465,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 78.0,
+        "arenaVisionElo": 1210,
+        "codingValueIndex": 94.0,
+        "arenaAgentTimePerTaskMin": 2.4,
+        "arenaAgentCostPerTaskUsd": 0,
+        "speedTokensPerSecond": 155
+      }
+    },
+    {
+      "id": "qwen2.5-vl-32b",
+      "provider": "oss",
+      "label": "Qwen2.5 VL 32B",
+      "tiers": [
+        "maker"
+      ],
+      "power": 3,
+      "price": {
+        "in": 0,
+        "out": 0,
+        "note": "Open-weight local/cluster runtime ($0 API cost)."
+      },
+      "efforts": [],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Open-Source Vision & UI Layout Candidate (awaiting Phase 1 RFT certification).",
+      "benchlmSlug": "qwen2-5-vl-32b",
+      "scores": {
+        "overall": 71.4,
+        "agentic": 67.5,
+        "coding": 68.0,
+        "reasoning": 69.0,
+        "multimodalGrounded": 78.2,
+        "knowledge": 72.0,
+        "aaIntelligenceIndex": 41,
+        "arenaAgentNetImprovement": 7.5,
+        "cursorBench4": null,
+        "arenaCodingElo": null,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1615,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": 1245,
+        "bugHuntBench": null,
+        "cweBenchV2": null,
+        "aaAnalystAgent": 43.0,
+        "frontierMathT13": 60.0,
+        "frontierMathT4": null,
+        "arenaSearchElo": null,
+        "aaLcr": null,
+        "arenaCreativeWritingElo": null,
+        "arenaTextElo": null,
+        "osworld21Offline": 66.0,
+        "chartographyNoTools": 68.5,
+        "aaMmmuPro": 82.0,
+        "arenaVisionElo": 1265,
+        "codingValueIndex": 85.0,
+        "arenaAgentTimePerTaskMin": 4.8,
+        "arenaAgentCostPerTaskUsd": 0,
+        "speedTokensPerSecond": 78
+      }
+    },
+    {
+      "id": "gemma-3-27b-it",
+      "provider": "oss",
+      "label": "Gemma 3 27B IT",
+      "tiers": [
+        "maker"
+      ],
+      "power": 3,
+      "price": {
+        "in": 0,
+        "out": 0,
+        "note": "Open-weight local/cluster runtime ($0 API cost)."
+      },
+      "efforts": [],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Open-Source Research, Synthesis & Docs Specialist (Phase 0 OSS runtime).",
+      "benchlmSlug": "gemma-3-27b-it",
+      "scores": {
+        "overall": 70.9,
+        "agentic": 69.0,
+        "coding": 66.5,
+        "reasoning": 71.5,
+        "multimodalGrounded": 72.0,
+        "knowledge": 78.5,
+        "aaIntelligenceIndex": 40,
+        "arenaAgentNetImprovement": 6.8,
+        "cursorBench4": null,
+        "arenaCodingElo": 1465,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1575,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": null,
+        "cweBenchV2": null,
+        "aaAnalystAgent": 47.0,
+        "frontierMathT13": 64.0,
+        "frontierMathT4": null,
+        "arenaSearchElo": 1185,
+        "aaLcr": 80.5,
+        "arenaCreativeWritingElo": 1485,
+        "arenaTextElo": 1495,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 80.0,
+        "arenaVisionElo": 1220,
+        "codingValueIndex": 84.0,
+        "arenaAgentTimePerTaskMin": 3.8,
+        "arenaAgentCostPerTaskUsd": 0,
+        "speedTokensPerSecond": 110
+      }
+    },
+    {
+      "id": "claude-fable-5-2",
+      "provider": "claude",
+      "label": "Claude Fable 5.2",
+      "tiers": [
+        "boss"
+      ],
+      "power": 5,
+      "price": {
+        "in": 8,
+        "out": 40,
+        "note": "API-key billed Frontier Cross-Lab Final Review Gate only."
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Optional API-key Frontier Final Review Gate.",
+      "benchlmSlug": "claude-fable-5-2",
+      "scores": {
+        "overall": 93.65,
+        "agentic": 90.71,
+        "coding": 89.23,
+        "reasoning": 91,
+        "multimodalGrounded": 90.43,
+        "knowledge": 98.53,
+        "aaIntelligenceIndex": 65,
+        "arenaAgentNetImprovement": 30.48,
+        "cursorBench4": 60,
+        "arenaCodingElo": null,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1838,
+        "vibeCodeBench": 93.8,
+        "designArenaWebsiteElo": 1341,
+        "bugHuntBench": 58,
+        "cweBenchV2": 75,
+        "aaAnalystAgent": null,
+        "frontierMathT13": 95.088,
+        "frontierMathT4": 100,
+        "arenaSearchElo": null,
+        "aaLcr": 83.3,
+        "arenaCreativeWritingElo": null,
+        "arenaTextElo": null,
+        "osworld21Offline": 89.3,
+        "chartographyNoTools": 73.4,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 2.23,
+        "arenaAgentTimePerTaskMin": 18.6,
+        "arenaAgentCostPerTaskUsd": 8.56,
+        "speedTokensPerSecond": null
+      }
+    },
+    {
+      "id": "gemini-4-carbon",
+      "provider": "gemini",
+      "label": "Gemini 4 Carbon",
+      "tiers": [
+        "boss"
+      ],
+      "power": 5,
+      "price": {
+        "in": 2,
+        "out": 10,
+        "note": "API-key billed Frontier Orchestration Officer & Final Gate. Introductory price; doubles to $4 / $20 on 2026-12-01.",
+        "next": {
+          "from": "2026-12-01",
+          "in": 4,
+          "out": 20
+        }
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "enabled": true,
+      "estimated": false,
+      "planNote": "Primary Frontier Orchestration Officer & Final Review Gate (API key only).",
+      "benchlmSlug": "gemini-4-carbon",
+      "scores": {
+        "overall": 89.15,
+        "agentic": 84.61,
+        "coding": 83.88,
+        "reasoning": 84.83,
+        "multimodalGrounded": null,
+        "knowledge": null,
+        "aaIntelligenceIndex": 60,
+        "arenaAgentNetImprovement": 16.9,
+        "cursorBench4": 60.4,
+        "arenaCodingElo": 1568,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1768,
+        "vibeCodeBench": 89.1,
+        "designArenaWebsiteElo": 1285,
+        "bugHuntBench": 57.3,
+        "cweBenchV2": null,
+        "aaAnalystAgent": null,
+        "frontierMathT13": 90.526,
+        "frontierMathT4": 95.122,
+        "arenaSearchElo": null,
+        "aaLcr": 79.3,
+        "arenaCreativeWritingElo": 1516,
+        "arenaTextElo": 1526,
+        "osworld21Offline": 81.5,
+        "chartographyNoTools": 72.5,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 8.39,
+        "arenaAgentTimePerTaskMin": 9.7,
+        "arenaAgentCostPerTaskUsd": 1.36,
+        "speedTokensPerSecond": 100
+      }
+    },
+    {
+      "id": "claude-opus-5-5",
+      "provider": "claude",
+      "label": "Claude Opus 5.5",
+      "tiers": [
+        "manager",
+        "boss"
+      ],
+      "power": 4,
+      "price": {
+        "in": 4,
+        "out": 20,
+        "note": "API-key billed Frontier Gate / emergency fallback only."
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "enabled": true,
+      "estimated": false,
+      "planNote": "Optional Frontier Cross-Lab Gate; fallback-only if OSS runtime is offline.",
+      "benchlmSlug": "claude-opus-5-5",
+      "scores": {
+        "overall": 86.62,
+        "agentic": 83.85,
+        "coding": 82.6,
+        "reasoning": 80.53,
+        "multimodalGrounded": 85.09,
+        "knowledge": 89.76,
+        "aaIntelligenceIndex": 59,
+        "arenaAgentNetImprovement": 19.51,
+        "cursorBench4": 57.8,
+        "arenaCodingElo": 1547,
+        "terminalBench41": 65.76,
+        "arenaWebDevElo": 1815,
+        "vibeCodeBench": 90.3,
+        "designArenaWebsiteElo": 1323,
+        "bugHuntBench": 41.7,
+        "cweBenchV2": 67.1,
+        "aaAnalystAgent": 56.3,
+        "frontierMathT13": 91.228,
+        "frontierMathT4": 95,
+        "arenaSearchElo": 1213,
+        "aaLcr": 84.7,
+        "arenaCreativeWritingElo": 1517,
+        "arenaTextElo": 1507,
+        "osworld21Offline": 87.2,
+        "chartographyNoTools": 64.4,
+        "aaMmmuPro": 87.7,
+        "arenaVisionElo": 1295,
+        "codingValueIndex": 4.13,
+        "arenaAgentTimePerTaskMin": 4.5,
+        "arenaAgentCostPerTaskUsd": 2.09,
+        "speedTokensPerSecond": 98
+      }
+    },
+    {
+      "id": "gemini-4-argon",
+      "provider": "gemini",
+      "label": "Gemini 4 Argon",
+      "tiers": [
+        "manager"
+      ],
+      "power": 4,
+      "price": {
+        "in": 2,
+        "out": 10,
+        "note": "API-key billed Frontier Orchestrator / fallback. Doubles to $4 / $20 on 2026-12-01.",
+        "next": {
+          "from": "2026-12-01",
+          "in": 4,
+          "out": 20
+        }
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "enabled": true,
+      "estimated": false,
+      "planNote": "Frontier API Orchestrator / fallback-only when Open-Source runtime is offline.",
+      "benchlmSlug": "gemini-4-argon",
+      "scores": {
+        "overall": 79.03,
+        "agentic": 74.86,
+        "coding": 71.8,
+        "reasoning": 76.52,
+        "multimodalGrounded": null,
+        "knowledge": 79.22,
+        "aaIntelligenceIndex": 50,
+        "arenaAgentNetImprovement": 10.72,
+        "cursorBench4": 52.9,
+        "arenaCodingElo": 1553,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1681,
+        "vibeCodeBench": 91.9,
+        "designArenaWebsiteElo": 1313,
+        "bugHuntBench": 40.7,
+        "cweBenchV2": 65,
+        "aaAnalystAgent": 48.8,
+        "frontierMathT13": 85.965,
+        "frontierMathT4": 78.049,
+        "arenaSearchElo": null,
+        "aaLcr": 79.7,
+        "arenaCreativeWritingElo": 1523,
+        "arenaTextElo": 1522,
+        "osworld21Offline": 74.7,
+        "chartographyNoTools": 71.6,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 7.18,
+        "arenaAgentTimePerTaskMin": 7.1,
+        "arenaAgentCostPerTaskUsd": 0.69,
+        "speedTokensPerSecond": 83
+      }
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "provider": "claude",
+      "label": "Claude Sonnet 5.5",
+      "tiers": [
+        "maker",
+        "manager"
+      ],
+      "power": 3,
+      "price": {
+        "in": 2,
+        "out": 10,
+        "note": "API-key billed."
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "enabled": true,
+      "estimated": false,
+      "planNote": "Frontier emergency fallback when Open-Source runtime is offline; OSS Specialists run first.",
+      "benchlmSlug": "claude-sonnet-5-5",
+      "scores": {
+        "overall": 83.05,
+        "agentic": 72.73,
+        "coding": 80.97,
+        "reasoning": 76.98,
+        "multimodalGrounded": 78.92,
+        "knowledge": 82.07,
+        "aaIntelligenceIndex": 55,
+        "arenaAgentNetImprovement": 16.07,
+        "cursorBench4": 55.5,
+        "arenaCodingElo": 1517,
+        "terminalBench41": 63.94,
+        "arenaWebDevElo": 1772,
+        "vibeCodeBench": 92.4,
+        "designArenaWebsiteElo": 1313,
+        "bugHuntBench": 51.3,
+        "cweBenchV2": null,
+        "aaAnalystAgent": 57.5,
+        "frontierMathT13": 88.772,
+        "frontierMathT4": 80.488,
+        "arenaSearchElo": null,
+        "aaLcr": 82.7,
+        "arenaCreativeWritingElo": 1464,
+        "arenaTextElo": 1473,
+        "osworld21Offline": 83.9,
+        "chartographyNoTools": 61.6,
+        "aaMmmuPro": null,
+        "arenaVisionElo": 1263,
+        "codingValueIndex": 8.1,
+        "arenaAgentTimePerTaskMin": 2.6,
+        "arenaAgentCostPerTaskUsd": 0.89,
+        "speedTokensPerSecond": 138
+      }
+    },
+    {
+      "id": "gemini-4-hydrogen",
+      "provider": "gemini",
+      "label": "Gemini 4 Hydrogen",
+      "tiers": [
+        "maker",
+        "manager"
+      ],
+      "power": 3,
+      "price": {
+        "in": 1.5,
+        "out": 7.5,
+        "note": "API-key billed Frontier fast orchestrator / fallback."
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "enabled": true,
+      "estimated": true,
+      "planNote": "Light Frontier API orchestrator / fallback-only when Open-Source runtime is offline.",
+      "benchlmSlug": "gemini-4-hydrogen",
+      "scores": {
+        "overall": 79.06,
+        "agentic": null,
+        "coding": 75.75,
+        "reasoning": null,
+        "multimodalGrounded": null,
+        "knowledge": null,
+        "aaIntelligenceIndex": 54,
+        "arenaAgentNetImprovement": 14.8,
+        "cursorBench4": 54.3,
+        "arenaCodingElo": 1518,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1704,
+        "vibeCodeBench": 87.8,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": 32.7,
+        "cweBenchV2": 68.1,
+        "aaAnalystAgent": null,
+        "frontierMathT13": null,
+        "frontierMathT4": null,
+        "arenaSearchElo": null,
+        "aaLcr": null,
+        "arenaCreativeWritingElo": 1492,
+        "arenaTextElo": 1490,
+        "osworld21Offline": 77.6,
+        "chartographyNoTools": 66.6,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 10.1,
+        "arenaAgentTimePerTaskMin": 5.4,
+        "arenaAgentCostPerTaskUsd": 1.53,
+        "speedTokensPerSecond": null
+      }
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "provider": "claude",
+      "label": "Claude Haiku 5.5",
+      "tiers": [
+        "maker"
+      ],
+      "power": 2,
+      "price": {
+        "in": 0.1,
+        "out": 0.5,
+        "note": "The price is 5x ($0.50 / $2.50) when the prompt is over 100,000 tokens."
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "enabled": true,
+      "estimated": false,
+      "planNote": "Frontier emergency fallback when Open-Source runtime is offline; OSS Specialists run first.",
+      "benchlmSlug": "claude-haiku-5-5",
+      "scores": {
+        "overall": 67.64,
+        "agentic": 60.11,
+        "coding": 58.93,
+        "reasoning": 58.95,
+        "multimodalGrounded": 61.82,
+        "knowledge": 65.22,
+        "aaIntelligenceIndex": 36,
+        "arenaAgentNetImprovement": 0.42,
+        "cursorBench4": 48.4,
+        "arenaCodingElo": 1489,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1593,
+        "vibeCodeBench": 90.4,
+        "designArenaWebsiteElo": 1256,
+        "bugHuntBench": 21.5,
+        "cweBenchV2": null,
+        "aaAnalystAgent": 53.8,
+        "frontierMathT13": 75.088,
+        "frontierMathT4": 46.341,
+        "arenaSearchElo": null,
+        "aaLcr": 82.7,
+        "arenaCreativeWritingElo": null,
+        "arenaTextElo": 1421,
+        "osworld21Offline": 72.4,
+        "chartographyNoTools": 46.4,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 117.86,
+        "arenaAgentTimePerTaskMin": 1.8,
+        "arenaAgentCostPerTaskUsd": 0.08,
+        "speedTokensPerSecond": 241
+      }
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "provider": "gemini",
+      "label": "Gemini 3.8 Flash",
+      "tiers": [
+        "maker"
+      ],
+      "power": 2,
+      "price": {
+        "in": 0.75,
+        "out": 3.75,
+        "note": "Introductory price. It doubles to $1.50 / $7.50 on 2027-01-01.",
+        "next": {
+          "from": "2027-01-01",
+          "in": 1.5,
+          "out": 7.5
+        }
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "enabled": false,
+      "estimated": false,
+      "planNote": "Disabled by default. Works on every Google plan.",
+      "benchlmSlug": "gemini-3-8-flash",
+      "scores": {
+        "overall": 64.47,
+        "agentic": 63.55,
+        "coding": 55.3,
+        "reasoning": 64.46,
+        "multimodalGrounded": 69.87,
+        "knowledge": 68.39,
+        "aaIntelligenceIndex": 31,
+        "arenaAgentNetImprovement": 2.34,
+        "cursorBench4": null,
+        "arenaCodingElo": 1531,
+        "terminalBench41": 18.2,
+        "arenaWebDevElo": 1583,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": 1295,
+        "bugHuntBench": 18,
+        "cweBenchV2": null,
+        "aaAnalystAgent": 46.3,
+        "frontierMathT13": 68.421,
+        "frontierMathT4": 21.951,
+        "arenaSearchElo": null,
+        "aaLcr": 81.3,
+        "arenaCreativeWritingElo": 1488,
+        "arenaTextElo": 1497,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 85.6,
+        "arenaVisionElo": 1293,
+        "codingValueIndex": 14.73,
+        "arenaAgentTimePerTaskMin": 8.7,
+        "arenaAgentCostPerTaskUsd": 0.77,
+        "speedTokensPerSecond": 140
+      }
+    },
+    {
+      "id": "gemini-3.6-flash",
+      "provider": "gemini",
+      "label": "Gemini 3.6 Flash",
+      "tiers": [
+        "maker"
+      ],
+      "power": 2,
+      "price": {
+        "in": 0.75,
+        "out": 3.75,
+        "note": "Introductory price. It doubles to $1.50 / $7.50 on 2027-01-01.",
+        "next": {
+          "from": "2027-01-01",
+          "in": 1.5,
+          "out": 7.5
+        }
+      },
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "enabled": false,
+      "estimated": false,
+      "planNote": "Disabled by default. Effort levels and plan access are not verified.",
+      "benchlmSlug": "gemini-3-6-flash",
+      "scores": {
+        "overall": 62.23,
+        "agentic": 52.19,
+        "coding": 50.79,
+        "reasoning": 55.5,
+        "multimodalGrounded": 66.29,
+        "knowledge": 65.08,
+        "aaIntelligenceIndex": null,
+        "arenaAgentNetImprovement": null,
+        "cursorBench4": null,
+        "arenaCodingElo": null,
+        "terminalBench41": null,
+        "arenaWebDevElo": null,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": null,
+        "cweBenchV2": null,
+        "aaAnalystAgent": null,
+        "frontierMathT13": null,
+        "frontierMathT4": null,
+        "arenaSearchElo": null,
+        "aaLcr": null,
+        "arenaCreativeWritingElo": 1471,
+        "arenaTextElo": null,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": null,
+        "arenaVisionElo": null,
+        "codingValueIndex": 13.54,
+        "arenaAgentTimePerTaskMin": null,
+        "arenaAgentCostPerTaskUsd": null,
+        "speedTokensPerSecond": 215
+      }
+    },
+    {
+      "id": "gemini-3.5-flash-lite",
+      "provider": "gemini",
+      "label": "Gemini 3.5 Flash-Lite",
+      "tiers": [
+        "maker"
+      ],
+      "power": 1,
+      "price": {
+        "in": 0.3,
+        "out": 2.5,
+        "note": ""
+      },
+      "efforts": [],
+      "enabled": false,
+      "estimated": false,
+      "planNote": "Disabled by default. No effort level is known for it, so none is sent. Plan access is not verified.",
+      "benchlmSlug": "gemini-3-5-flash-lite",
+      "scores": {
+        "overall": 46.95,
+        "agentic": 34.16,
+        "coding": 34.68,
+        "reasoning": 9.09,
+        "multimodalGrounded": 51.52,
+        "knowledge": 46.7,
+        "aaIntelligenceIndex": 12,
+        "arenaAgentNetImprovement": null,
+        "cursorBench4": null,
+        "arenaCodingElo": null,
+        "terminalBench41": null,
+        "arenaWebDevElo": null,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": null,
+        "cweBenchV2": null,
+        "aaAnalystAgent": null,
+        "frontierMathT13": 25.965,
+        "frontierMathT4": 0,
+        "arenaSearchElo": null,
+        "aaLcr": 76,
+        "arenaCreativeWritingElo": null,
+        "arenaTextElo": null,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 79,
+        "arenaVisionElo": null,
+        "codingValueIndex": 13.87,
+        "arenaAgentTimePerTaskMin": null,
+        "arenaAgentCostPerTaskUsd": null,
+        "speedTokensPerSecond": 461
+      }
+    },
+    {
+      "id": "gpt-6-astra",
+      "provider": "openai",
+      "label": "GPT-6 Astra",
+      "tiers": [
+        "boss"
+      ],
+      "power": 5,
+      "price": {
+        "in": 10,
+        "out": 50,
+        "note": "Above 272,000 input tokens: 2x input price, 1.5x output price."
+      },
+      "efforts": [],
+      "enabled": false,
+      "estimated": false,
+      "planNote": "Disabled: WorkShop has no OpenAI CLI adapter yet. Effort levels are not verified.",
+      "benchlmSlug": "gpt-6-astra",
+      "scores": {
+        "overall": 85.65,
+        "agentic": 73.65,
+        "coding": 78.7,
+        "reasoning": 81.13,
+        "multimodalGrounded": 79.71,
+        "knowledge": 85.47,
+        "aaIntelligenceIndex": 57,
+        "arenaAgentNetImprovement": 14.56,
+        "cursorBench4": null,
+        "arenaCodingElo": 1548,
+        "terminalBench41": 60.3,
+        "arenaWebDevElo": 1764,
+        "vibeCodeBench": 89.6,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": 45,
+        "cweBenchV2": 64.2,
+        "aaAnalystAgent": 51.2,
+        "frontierMathT13": 93.684,
+        "frontierMathT4": 97.6,
+        "arenaSearchElo": 1231,
+        "aaLcr": 80.7,
+        "arenaCreativeWritingElo": 1451,
+        "arenaTextElo": 1474,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 86.9,
+        "arenaVisionElo": 1283,
+        "codingValueIndex": 1.57,
+        "arenaAgentTimePerTaskMin": 11.2,
+        "arenaAgentCostPerTaskUsd": 5.38,
+        "speedTokensPerSecond": 73
+      }
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "provider": "openai",
+      "label": "GPT-6.1 Sol",
+      "tiers": [
+        "manager"
+      ],
+      "power": 4,
+      "price": {
+        "in": 2,
+        "out": 10,
+        "note": "Above 272,000 input tokens: 2x input price, 1.5x output price."
+      },
+      "efforts": [],
+      "enabled": false,
+      "estimated": false,
+      "planNote": "Disabled: WorkShop has no OpenAI CLI adapter yet. Effort levels are not verified.",
+      "benchlmSlug": "gpt-6-1-sol",
+      "scores": {
+        "overall": 84.6,
+        "agentic": 65.67,
+        "coding": 73.36,
+        "reasoning": 80.43,
+        "multimodalGrounded": 78.9,
+        "knowledge": 85.6,
+        "aaIntelligenceIndex": 55,
+        "arenaAgentNetImprovement": 12.4,
+        "cursorBench4": null,
+        "arenaCodingElo": 1540,
+        "terminalBench41": 60.91,
+        "arenaWebDevElo": 1743,
+        "vibeCodeBench": 88.9,
+        "designArenaWebsiteElo": 1308,
+        "bugHuntBench": 44.3,
+        "cweBenchV2": null,
+        "aaAnalystAgent": 50,
+        "frontierMathT13": 93.684,
+        "frontierMathT4": 100,
+        "arenaSearchElo": 1230,
+        "aaLcr": 83,
+        "arenaCreativeWritingElo": 1449,
+        "arenaTextElo": 1481,
+        "osworld21Offline": null,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 86,
+        "arenaVisionElo": 1293,
+        "codingValueIndex": 7.34,
+        "arenaAgentTimePerTaskMin": 9.2,
+        "arenaAgentCostPerTaskUsd": 1.01,
+        "speedTokensPerSecond": null
+      }
+    },
+    {
+      "id": "gpt-6.1-terra",
+      "provider": "openai",
+      "label": "GPT-6.1 Terra",
+      "tiers": [
+        "maker"
+      ],
+      "power": 3,
+      "price": {
+        "in": 1,
+        "out": 5,
+        "note": ""
+      },
+      "efforts": [],
+      "enabled": false,
+      "estimated": true,
+      "planNote": "Disabled: WorkShop has no OpenAI CLI adapter yet. Effort levels are not verified.",
+      "benchlmSlug": "gpt-6-1-terra",
+      "scores": {
+        "overall": 79.64,
+        "agentic": 74.83,
+        "coding": 69.79,
+        "reasoning": 75.48,
+        "multimodalGrounded": 77.39,
+        "knowledge": 77.45,
+        "aaIntelligenceIndex": 51,
+        "arenaAgentNetImprovement": 11.96,
+        "cursorBench4": null,
+        "arenaCodingElo": null,
+        "terminalBench41": null,
+        "arenaWebDevElo": 1678,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": null,
+        "cweBenchV2": null,
+        "aaAnalystAgent": null,
+        "frontierMathT13": 90.877,
+        "frontierMathT4": 92.683,
+        "arenaSearchElo": null,
+        "aaLcr": 82.7,
+        "arenaCreativeWritingElo": null,
+        "arenaTextElo": null,
+        "osworld21Offline": 74.2,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 84.7,
+        "arenaVisionElo": null,
+        "codingValueIndex": 13.96,
+        "arenaAgentTimePerTaskMin": 9.9,
+        "arenaAgentCostPerTaskUsd": 0.88,
+        "speedTokensPerSecond": null
+      }
+    },
+    {
+      "id": "gpt-6-luna",
+      "provider": "openai",
+      "label": "GPT-6 Luna",
+      "tiers": [
+        "maker"
+      ],
+      "power": 2,
+      "price": {
+        "in": 0.1,
+        "out": 0.5,
+        "note": "Above 272,000 input tokens: 2x input price, 1.5x output price."
+      },
+      "efforts": [],
+      "enabled": false,
+      "estimated": false,
+      "planNote": "Disabled: WorkShop has no OpenAI CLI adapter yet. Effort levels are not verified.",
+      "benchlmSlug": "gpt-6-luna",
+      "scores": {
+        "overall": 61.13,
+        "agentic": 54.54,
+        "coding": 52.05,
+        "reasoning": 54.3,
+        "multimodalGrounded": 63.59,
+        "knowledge": 62.43,
+        "aaIntelligenceIndex": 28,
+        "arenaAgentNetImprovement": 1.52,
+        "cursorBench4": null,
+        "arenaCodingElo": 1501,
+        "terminalBench41": 15.2,
+        "arenaWebDevElo": 1577,
+        "vibeCodeBench": null,
+        "designArenaWebsiteElo": null,
+        "bugHuntBench": 18.3,
+        "cweBenchV2": null,
+        "aaAnalystAgent": 43.8,
+        "frontierMathT13": 78.947,
+        "frontierMathT4": 56.098,
+        "arenaSearchElo": 1160,
+        "aaLcr": 83.3,
+        "arenaCreativeWritingElo": 1408,
+        "arenaTextElo": 1441,
+        "osworld21Offline": 48.9,
+        "chartographyNoTools": null,
+        "aaMmmuPro": 79.7,
+        "arenaVisionElo": 1235,
+        "codingValueIndex": 104.1,
+        "arenaAgentTimePerTaskMin": 6.1,
+        "arenaAgentCostPerTaskUsd": 0.08,
+        "speedTokensPerSecond": null
+      }
+    }
+  ]
+}

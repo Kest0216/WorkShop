@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-16",
+  "harnesses": [
+    {
+      "id": "fullstack-node",
+      "label": "Fullstack Node & API Rig",
+      "summary": "Balanced implementation harness for Node ESM services, REST/SSE handlers, and clean surgical diffs confined to the task bench.",
+      "roleHint": "maker",
+      "domains": ["backend", "chore"],
+      "platforms": ["node", "posix", "git"],
+      "runner": { "kind": "openai_loop", "maxSteps": 32, "temperature": 0.1 },
+      "tools": ["read_file", "write_file", "edit_file", "list_dir", "search_text", "run_shell", "shop_mcp"],
+      "sandbox": { "writeScope": "bench", "allowNet": false },
+      "protocol": {
+        "workflow": [
+          "Inspect existing modules and contracts before editing.",
+          "Make minimal, idiomatic ESM changes inside owned files.",
+          "Run project checks cleanly and verify edge cases.",
+          "Post a concise DONE summary with exact files and check output on ShopTalk."
+        ],
+        "systemPromptAddon": "Equip Fullstack Node & API Rig: inspect callers first, preserve zero-dependency conventions, keep patches minimal, run checks before calling DONE."
+      },
+      "rft": {
+        "status": "phase1_ready",
+        "rewardSignals": ["check_cmd_exit_zero", "diff_minimality", "zero_hub_path_touch"],
+        "evalSuite": "suites/backend-node-v0",
+        "notes": "Phase 1 GRPO/RFT target: multi-file Node ESM feature and bugfix trajectories with deterministic test reward."
+      }
+    },
+    {
+      "id": "systems-debug",
+      "label": "Systems Root-Cause & Fix Rig",
+      "summary": "Reproduce-first debugging harness requiring failing reproduction before patching and full regression re-runs afterward.",
+      "roleHint": "maker",
+      "domains": ["fix", "backend"],
+      "platforms": ["node", "git", "posix"],
+      "runner": { "kind": "openai_loop", "maxSteps": 36, "temperature": 0.05 },
+      "tools": ["read_file", "edit_file", "list_dir", "search_text", "run_shell", "shop_mcp"],
+      "sandbox": { "writeScope": "bench", "allowNet": false },
+      "protocol": {
+        "workflow": [
+          "Reproduce the failure or isolate the exact failing assertion before changing code.",
+          "Trace root cause rather than masking symptoms.",
+          "Write a regression test alongside the minimal fix.",
+          "Re-run the relevant test suite and report root cause + verified command output."
+        ],
+        "systemPromptAddon": "Equip Systems Root-Cause & Fix Rig: reproduce first, trace state transitions, pair every fix with a regression test."
+      },
+      "rft": {
+        "status": "phase1_ready",
+        "rewardSignals": ["repro_before_fix", "check_cmd_exit_zero", "regression_test_added", "zero_hub_path_touch"],
+        "evalSuite": "suites/systems-debug-v0",
+        "notes": "Rewards reproducing failure prior to edit and zero regressions."
+      }
+    },
+    {
+      "id": "ui-pixel-craft",
+      "label": "UI & 16-Bit Canvas Craft Rig",
+      "summary": "Frontend DOM, CSS layout, accessibility, and 16-bit Canvas rendering harness preserving safe DOM creation and responsive sizing.",
+      "roleHint": "maker",
+      "domains": ["frontend", "vision"],
+      "platforms": ["browser", "canvas", "css", "dom"],
+      "runner": { "kind": "openai_loop", "maxSteps": 30, "temperature": 0.15 },
+      "tools": ["read_file", "write_file", "edit_file", "list_dir", "search_text", "run_shell", "shop_mcp"],
+      "sandbox": { "writeScope": "bench", "allowNet": false },
+      "protocol": {
+        "workflow": [
+          "Inspect existing components, selectors, and stylesheet variables before writing UI.",
+          "Build DOM nodes safely without unsanitized HTML injection.",
+          "Verify layout constraints, keyboard accessibility, and scene hit-testing.",
+          "Run UI stub and scene tests before DONE."
+        ],
+        "systemPromptAddon": "Equip UI & 16-Bit Canvas Craft Rig: never use unsafe innerHTML, reuse palette tokens and selectors, keep layout responsive."
+      },
+      "rft": {
+        "status": "phase1_ready",
+        "rewardSignals": ["ui_test_pass", "no_unsafe_innerhtml", "hit_test_invariants_preserved"],
+        "evalSuite": "suites/ui-craft-v0",
+        "notes": "Phase 1 target includes headless DOM/Canvas layout assertions and zero console warnings."
+      }
+    },
+    {
+      "id": "test-fortress",
+      "label": "Adversarial & Regression Test Rig",
+      "summary": "Verification-focused harness for unit tests, contract assertions, boundary cases, and buddy-check verification.",
+      "roleHint": "maker",
+      "domains": ["test", "review"],
+      "platforms": ["node:test", "git"],
+      "runner": { "kind": "openai_loop", "maxSteps": 28, "temperature": 0.05 },
+      "tools": ["read_file", "write_file", "edit_file", "list_dir", "search_text", "run_shell", "shop_mcp"],
+      "sandbox": { "writeScope": "bench", "allowNet": false },
+      "protocol": {
+        "workflow": [
+          "Read the contract and acceptance criteria before writing assertions.",
+          "Cover happy path, invalid input, crash/atomic boundaries, and concurrency where applicable.",
+          "Ensure tests clean up temp dirs and leave zero orphan processes.",
+          "Run the new suite and report exact pass counts."
+        ],
+        "systemPromptAddon": "Equip Adversarial & Regression Test Rig: test failure modes and invariants, clean up temp directories, never weaken assertions."
+      },
+      "rft": {
+        "status": "phase1_ready",
+        "rewardSignals": ["mutation_kill_rate", "zero_flaky_timers", "check_cmd_exit_zero"],
+        "evalSuite": "suites/test-fortress-v0",
+        "notes": "Phase 1 reward weighs mutant detection and clean teardown."
+      }
+    },
+    {
+      "id": "data-algo-lab",
+      "label": "Data & Algorithms Lab Rig",
+      "summary": "Algorithmic correctness, complexity, numeric edge-case, and data-pipeline transformation harness.",
+      "roleHint": "maker",
+      "domains": ["data", "algo"],
+      "platforms": ["node", "python", "sql"],
+      "runner": { "kind": "openai_loop", "maxSteps": 32, "temperature": 0.05 },
+      "tools": ["read_file", "write_file", "edit_file", "list_dir", "search_text", "run_shell", "shop_mcp"],
+      "sandbox": { "writeScope": "bench", "allowNet": false },
+      "protocol": {
+        "workflow": [
+          "Specify invariants, numeric bounds, and tie-breaking determinism upfront.",
+          "Benchmark or stress-test edge cases (empty sets, ties, NaN/Inf, large inputs).",
+          "Keep helpers pure and side-effect free."
+        ],
+        "systemPromptAddon": "Equip Data & Algorithms Lab Rig: prioritize determinism, numeric stability, and property tests over ad-hoc heuristics."
+      },
+      "rft": {
+        "status": "phase0_scaffold",
+        "rewardSignals": ["property_test_pass", "determinism_across_runs", "complexity_bound_met"],
+        "evalSuite": "suites/data-algo-v0",
+        "notes": "Phase 0 scaffold: awaits Phase 1 RFT run on reasoning/coding open-weight models."
+      }
+    },
+    {
+      "id": "research-dossier",
+      "label": "Research & Architecture Dossier Rig",
+      "summary": "Read-heavy analysis, architecture mapping, and concise technical documentation harness.",
+      "roleHint": "maker",
+      "domains": ["research", "synthesis", "docs"],
+      "platforms": ["markdown", "git"],
+      "runner": { "kind": "openai_loop", "maxSteps": 24, "temperature": 0.1 },
+      "tools": ["read_file", "write_file", "edit_file", "list_dir", "search_text", "shop_mcp"],
+      "sandbox": { "writeScope": "bench", "allowNet": false },
+      "protocol": {
+        "workflow": [
+          "Gather primary evidence from repository files only — never invent file paths or symbol names.",
+          "Cite exact symbols, paths, and line ranges verified during the turn.",
+          "Produce clear structured markdown or dossier deliverables."
+        ],
+        "systemPromptAddon": "Equip Research & Architecture Dossier Rig: cite only directly inspected files and symbols; separate verified facts from open questions."
+      },
+      "rft": {
+        "status": "phase0_scaffold",
+        "rewardSignals": ["citation_grounding_score", "zero_hallucinated_paths", "rubric_completeness"],
+        "evalSuite": "suites/research-dossier-v0",
+        "notes": "Phase 1 reward penalizes unverified file/symbol claims."
+      }
+    },
+    {
+      "id": "team-lead-coord",
+      "label": "Team Lead Coordination Rig",
+      "summary": "Floor Team Lead harness for dependency tracking, specialist unblocking, small-task QA, and ShopTalk coordination.",
+      "roleHint": "manager",
+      "domains": ["plan", "review", "synthesis"],
+      "platforms": ["shoptalk", "git"],
+      "runner": { "kind": "openai_loop", "maxSteps": 20, "temperature": 0.1 },
+      "tools": ["read_file", "list_dir", "search_text", "shop_mcp"],
+      "sandbox": { "writeScope": "read_only", "allowNet": false },
+      "protocol": {
+        "workflow": [
+          "Track stream dependencies and unblock stalled specialists early via concise ShopTalk replies.",
+          "Enforce harness scope and check verification on S-tier reviews.",
+          "Escalate architectural contradictions cleanly to the Frontier Orchestration Officer."
+        ],
+        "systemPromptAddon": "Equip Team Lead Coordination Rig: read-only orchestration on the floor; unblock specialists, check small hand-ins, keep token overhead minimal."
+      },
+      "rft": {
+        "status": "phase1_ready",
+        "rewardSignals": ["unblock_latency", "review_precision", "zero_spurious_escalations"],
+        "evalSuite": "suites/team-lead-v0",
+        "notes": "Specialized for fast open-weight Team Lead coordination."
+      }
+    }
+  ]
+}
