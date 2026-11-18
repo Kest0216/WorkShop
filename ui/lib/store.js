@@ -133,7 +133,7 @@ export function createStore({ api, watch = WATCH }) {
   const store = {
     ready: false, conn: 'connecting', seq: 0, rev: 0, polling: POLLING,
     board: [], boardRev: 0, providers: [], settings: {}, models: { registry: null, leaders: null }, inbox: [],
-    harnesses: [], roster: [], requisitions: [],
+    harnesses: [], roster: [], requisitions: [], rlPort: null,
     boardSeenId: Number(prefs.get('boardSeen', -1)),
 
     get(kind, id) { const m = ents[kind]; return m && id != null ? m.get(id) || null : null; },
@@ -160,6 +160,7 @@ export function createStore({ api, watch = WATCH }) {
       else if (slice === 'harnesses') store.harnesses = normHarnesses(value);
       else if (slice === 'roster') store.roster = normList(value);
       else if (slice === 'requisitions') store.requisitions = normList(value);
+      else if (slice === 'rlPort') store.rlPort = value && typeof value === 'object' ? value : null;
       else return;
       touch(slice);
     },
@@ -272,6 +273,7 @@ export function createStore({ api, watch = WATCH }) {
     store.harnesses = normHarnesses(data.harnesses);
     store.roster = normList(data.roster);
     store.requisitions = normList(data.requisitions);
+    store.rlPort = data.rlPort && typeof data.rlPort === 'object' ? data.rlPort : null;
     store.board = [];
     boardIds.clear();
     store.boardRev++;

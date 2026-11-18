@@ -620,7 +620,7 @@ test('the runner works with the real registry and the mock adapter', async (t) =
   });
   t.after(async () => { await runner.shutdown(); providers.dispose(); await store.flush(); fs.rmSync(dir, { recursive: true, force: true }); });
   await providers.detect();
-  assert.deepEqual(providers.list().map((p) => [p.id, p.usable]), [['claude', false], ['gemini', false], ['oss', false], ['mock', true]]);
+  assert.deepEqual(providers.list().map((p) => [p.id, p.usable]), [['claude', false], ['gemini', false], ['openai', false], ['oss', false], ['mock', true]]);
 
   store.put('agents', { id: 'A1', jobId: null, role: 'boss', handle: '@b1', provider: 'mock', model: 'mock', sessionId: null, stats: {} });
   const res = await runner.run('A1', { prompt: 'Plan the job.', systemPrompt: 'Boss card.', cwd: work });

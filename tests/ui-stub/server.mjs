@@ -300,10 +300,11 @@ const DEFAULT_SETTINGS = {
   safety: 'sandboxed',
   thrift: 0.3,
   allowFallback: true,
-  auth: { claude: null, gemini: null },
-  authAck: { claude: null, gemini: null },
-  selfTest: { claude: null, gemini: null },
+  auth: { claude: null, gemini: null, openai: null },
+  authAck: { claude: null, gemini: null, openai: null },
+  selfTest: { claude: null, gemini: null, openai: null },
   oss: { engine: 'ollama', baseUrl: 'http://127.0.0.1:11434/v1', standIn: false },
+  rlPort: { mode: 'sim', localUrl: 'http://127.0.0.1:8788', remoteUrl: '', remoteProvider: 'custom' },
   presence: 'here',
   humanWaitMin: 30,
   budgetUsd: 20,
@@ -321,12 +322,16 @@ const POLICY = {
   gemini: {
     apikey: { lines: ['You pay per token on your Gemini API account.', 'Phase 0 uses Gemini for Orchestration Officers, Review Gates & routing.', 'Consumer subscription logins are disabled for ToS compliance.'], url: 'https://ai.google.dev/pricing' },
   },
+  openai: {
+    subscription: { lines: ['Uses official OpenAI Sign in with ChatGPT (OAuth 2.0 + PKCE).', 'Closed-source models act as Officers & Review Gates only (blocked from GPU RL).'], url: 'https://developers.openai.com/codex/auth' },
+    apikey: { lines: ['Uses OPENAI_API_KEY stored in Keychain.', 'Closed-source models act as Officers & Review Gates only.'], url: 'https://platform.openai.com/docs/pricing' },
+  },
   oss: {
     standin: { lines: ['Phase 0 Stand-in simulation mode ($0).', 'Exercises Harness Rack & Employee Book locally without GPU weights.', 'Enable Ollama/vLLM in Runtimes & Keys for live inference.'], url: null },
     local: { lines: ['Open-source models run at $0 via local or cluster endpoint.', 'Benches enforce strict file containment and harness protocols.'], url: null },
   },
 };
-const KEY_OF_LAB = { claude: 'anthropic', gemini: 'gemini', oss: 'oss' };
+const KEY_OF_LAB = { claude: 'anthropic', gemini: 'gemini', openai: 'openai', oss: 'oss' };
 const SELFTEST_CORE = [
   { name: 'Write a file outside the turn folder', ok: true, detail: 'Refused: Operation not permitted.' },
   { name: 'Read the canary file on the deny-read list', ok: true, detail: 'Refused: data/run/selftest/canary is not readable.' },
@@ -338,6 +343,9 @@ function freshLabs() {
   return {
     oss: { id: 'oss', label: 'Open-Source Runtime', lab: 'oss', installed: true, version: 'standin', path: 'http://127.0.0.1:11434/v1', auth: 'ok', cooling: null, cooledModels: {},
       loginCmd: null, models: ['qwen3-coder-32b', 'deepseek-r1-32b', 'devstral-24b', 'llama-4-scout-17b', 'qwen2.5-vl-32b', 'gemma-3-27b-it'],
+      installHint: null, limit: null },
+    openai: { id: 'openai', label: 'OpenAI (ChatGPT / Codex)', lab: 'openai', installed: true, version: 'siwc-1.0', path: 'https://auth.openai.com', auth: 'none', cooling: null, cooledModels: {},
+      loginCmd: 'Continue with ChatGPT', models: ['gpt-6-astra', 'gpt-6.1-sol'], loginStarted: false,
       installHint: null, limit: null },
     claude: { id: 'claude', label: 'Claude Code', lab: 'anthropic', installed: true, version: '2.4.1', path: '/opt/homebrew/bin/claude', auth: 'ok', cooling: null, cooledModels: {},
       loginCmd: null, models: null, loginStarted: false,
@@ -380,13 +388,18 @@ function providerStatus(p) {
   if (p.cooling && p.cooling.until <= Date.now()) p.cooling = null;
   let reason = null;
   if (!p.installed) reason = `${p.label} is not installed.`;
-  else if (mode !== 'apikey' || !ack) reason = 'Choose API key mode (consumer subscriptions are disabled in Phase 0).';
+  else if (p.id === 'openai') {
+    if (!mode || !ack) reason = 'Choose "Continue with ChatGPT" or "Use API key".';
+    else if (mode === 'subscription' && p.auth !== 'ok') reason = 'Click "Continue with ChatGPT" to sign in.';
+    else if (mode === 'apikey' && !keySet) reason = 'No OPENAI_API_KEY saved.';
+    else if (settings.safety === 'sandboxed' && !(st && st.ok)) reason = 'Run the self-test once.';
+  } else if (mode !== 'apikey' || !ack) reason = 'Choose API key mode (consumer subscriptions are disabled for this provider).';
   else if (!keySet) reason = 'No API key is saved for this runtime.';
   else if (settings.safety === 'sandboxed' && !(st && st.ok && st.version === p.version)) reason = st && !st.ok ? 'The self-test failed. Agents of this runtime do not start.' : 'Run the self-test once. It proves that agents stay inside the sandbox.';
   else if (p.cooling) reason = `Paused until ${hhmm(p.cooling.until)}: ${p.cooling.reason}`;
   return {
     id: p.id, label: p.label, lab: p.lab, installed: p.installed, version: p.version, path: p.path,
-    auth: keySet ? 'ok' : 'none', mode, ack, keySet, usable: reason === null, reason,
+    auth: p.id === 'openai' && mode === 'subscription' ? p.auth : keySet ? 'ok' : 'none', mode, ack, keySet, usable: reason === null, reason,
     cooling: p.cooling ? { until: p.cooling.until, reason: p.cooling.reason } : null, cooledModels: p.cooledModels,
     selfTest: st ? { version: st.version, ok: st.ok, ts: st.ts } : null, policyNote: POLICY[p.id],
     loginCmd: null, installHint: p.installed ? null : p.installHint, models: p.models,
@@ -2595,14 +2608,21 @@ route('PUT', '/api/providers/oss', ({ body }) => {
 route('PUT', '/api/providers/:id/mode', ({ params, body }) => {
   const p = needLab(params.id);
   if (p.id === 'oss') return providerStatus(p);
-  if (body.mode !== 'apikey') throw httpError(400, 'Phase 0 requires API key mode; consumer subscriptions are disabled.');
-  settings = deepMerge(settings, { auth: { [p.id]: 'apikey' }, authAck: { [p.id]: { mode: 'apikey', ts: Date.now() } } });
+  const allowed = p.id === 'openai' ? ['apikey', 'subscription'] : ['apikey'];
+  if (!allowed.includes(body.mode)) throw httpError(400, `${p.label} supports ${allowed.join(' or ')} mode only.`);
+  settings = deepMerge(settings, { auth: { [p.id]: body.mode }, authAck: { [p.id]: { mode: body.mode, ts: Date.now() } } });
   emit('settings', { settings });
   emitProviders();
   return providerStatus(p);
 });
-route('POST', '/api/providers/:id/login', () => {
-  throw httpError(400, 'Interactive consumer subscription logins are disabled in Phase 0. Configure an API key instead.');
+route('POST', '/api/providers/:id/login', ({ params }) => {
+  const p = needLab(params.id);
+  if (p.id !== 'openai') throw httpError(400, 'Interactive consumer subscription logins are disabled for Anthropic and Google. Configure an API key instead.');
+  p.auth = 'ok';
+  settings = deepMerge(settings, { auth: { openai: 'subscription' }, authAck: { openai: { mode: 'subscription', ts: Date.now() } } });
+  emit('settings', { settings });
+  emitProviders();
+  return { ok: true, launched: true, method: 'browser', message: 'Signed in with ChatGPT (stub).' };
 });
 route('POST', '/api/providers/:id/check', ({ params }) => {
   const p = needLab(params.id);
@@ -2685,6 +2705,84 @@ route('POST', '/api/requisitions/:id/dismiss', ({ params }) => {
   emit('requisitions', { requisitions });
   return r;
 });
+route('POST', '/api/training/forge', ({ body }) => {
+  if (/^(claude|gemini|gpt-|o1-|o3-|o4-|openai)/i.test(String(body.baseModel || ''))) {
+    throw httpError(400, 'Closed-source models cannot enter the RL training pipeline.');
+  }
+  const item = {
+    id: `TR${reqSeq++}`,
+    status: body.autoStart === false ? 'queued_phase1' : 'training',
+    domain: body.domain || (body.specialties && body.specialties[0]) || 'backend',
+    suggestedName: body.name || 'ForgeSpec',
+    candidateBaseModel: body.baseModel || 'qwen3-coder-32b',
+    harnessId: body.harnessId || 'fullstack-node',
+    tools: Array.isArray(body.tools) ? body.tools : ['read_file', 'write_file', 'run_shell', 'shop_mcp'],
+    portMode: (settings.rlPort && settings.rlPort.mode) || 'sim',
+    rlJob: { jobId: `rl_${Date.now()}`, step: 40, totalSteps: 100, metrics: { reward: 0.84 } },
+    createdAt: Date.now(), updatedAt: Date.now(),
+  };
+  requisitions.unshift(item);
+  emit('requisitions', { requisitions });
+  return { requisition: item, rlJob: item.rlJob };
+});
+route('POST', '/api/requisitions/:id/start', ({ params }) => {
+  const r = requisitions.find((x) => x.id === params.id);
+  if (!r) throw httpError(404, 'Unknown requisition.');
+  r.status = 'training';
+  r.portMode = (settings.rlPort && settings.rlPort.mode) || 'sim';
+  r.rlJob = { jobId: `rl_${Date.now()}`, step: 50, totalSteps: 100, metrics: { reward: 0.85 } };
+  emit('requisitions', { requisitions });
+  return { requisition: r };
+});
+route('POST', '/api/requisitions/:id/poll', ({ params }) => {
+  const r = requisitions.find((x) => x.id === params.id);
+  if (!r) throw httpError(404, 'Unknown requisition.');
+  r.status = 'enrolled';
+  r.qaReport = {
+    passed: true, evalScore: 87.5, passAt1: 0.85,
+    checks: [
+      { id: 'open_weight_brain', ok: true, detail: r.candidateBaseModel },
+      { id: 'competence_benchmark', ok: true, detail: 'evalScore=87.5, pass@1=85%' },
+      { id: 'sandbox_and_hub_containment', ok: true, detail: '0 violations' },
+      { id: 'harness_tool_compliance', ok: true, detail: 'adherence=94%' },
+    ],
+  };
+  const entry = {
+    id: `spec-${String(r.suggestedName || 'forge').toLowerCase()}-${r.id.toLowerCase()}`,
+    name: r.suggestedName || 'ForgeSpec', role: 'maker', title: `${r.domain} Specialist`,
+    baseModel: r.candidateBaseModel, checkpoint: `sim://${r.candidateBaseModel}-${r.domain}-rl`,
+    harnessId: r.harnessId, tools: r.tools || [], specialties: [r.domain],
+    certification: r.portMode === 'sim' ? 'sim_trained' : 'curated',
+    benchmark: { evalScore: 87.5, passAt1: 0.85, portMode: r.portMode || 'sim', verifiedAt: Date.now() },
+    ratings: { score: 0, shipped: 0, denied: 0, discarded: 0, history: [] },
+    enabled: true, style: { seed: 2501 }, record: { tasksCompleted: 0, reworks: 0 },
+  };
+  rosterEntries.push(entry);
+  r.enrolledRosterId = entry.id;
+  emit('roster', { roster: rosterEntries });
+  emit('requisitions', { requisitions });
+  return { requisition: r, enrolled: entry };
+});
+route('POST', '/api/requisitions/:id/cancel', ({ params }) => {
+  const r = requisitions.find((x) => x.id === params.id);
+  if (!r) throw httpError(404, 'Unknown requisition.');
+  r.status = 'queued_phase1';
+  emit('requisitions', { requisitions });
+  return { requisition: r };
+});
+route('GET', '/api/rl-port', () => ({
+  ...(settings.rlPort || { mode: 'sim', localUrl: 'http://127.0.0.1:8788', remoteUrl: '', remoteProvider: 'custom' }),
+  hasCustomModule: false,
+  agentPrompt: 'Read ports/rl/PORT_CONTRACT.md and implement local/rl-port.mjs for my hardware.',
+}));
+route('PUT', '/api/rl-port', ({ body }) => {
+  settings.rlPort = { ...(settings.rlPort || {}), ...body };
+  emit('rlPort', settings.rlPort);
+  return { ...settings.rlPort, hasCustomModule: false };
+});
+route('POST', '/api/rl-port/probe', () => ({
+  ok: true, mode: (settings.rlPort && settings.rlPort.mode) || 'sim', engine: 'sim-rl-v1', adapter: 'stub',
+}));
 
 route('GET', '/api/keys', () => [...keys.values()].map(keyView));
 route('PUT', '/api/keys/:id', ({ params, body }) => {

@@ -27,13 +27,22 @@ import { h, showMarks } from './dom.js';
 import * as ui from './widgets.js';
 import { sel } from './selectors.js';
 
-const MODE_LABEL = { apikey: 'Use an API key' };
+const MODE_LABEL = {
+  apikey: 'Use an API key',
+  subscription: 'Continue with ChatGPT (subscription)',
+};
 const BILLING = {
-  apikey: 'Billing: you pay per token on your API account. Phase 0 uses Frontier API keys only for orchestration and final review gates.',
+  apikey: 'Billing: you pay per token on your API account, bounded by your WorkShop job budget.',
+  subscription: 'Billing: routes eligible OpenAI Officer & Gate turns through your existing ChatGPT Plus/Pro/Team subscription ($0 separate API key spend).',
 };
 // The steps of a sign-in in the words of this window: every button they name exists here.
 // (The steps that the hub sends are the same for every lab and name a "Re-check" button. They show for a lab this window does not know.)
 const SIGNIN_STEPS = {
+  openai: [
+    'Your browser opens to OpenAI ("Continue with ChatGPT" OAuth + PKCE portal).',
+    'Sign in with your OpenAI account and authorize ChatGPT plan usage for WorkShop.',
+    'Wait for the browser confirmation tab ("Signed in with ChatGPT!"), then press "I signed in".',
+  ],
   claude: [
     'A Terminal window opens and runs: claude auth login',
     'Your browser opens. Sign in with your Claude account.',
@@ -84,7 +93,7 @@ export function createLabs({ api, store, toasts, modals, openPanel }) {
   function prune() { for (const id of [...started.keys()]) { const p = find(id); if (!p || p.auth === 'ok') setStarted(id, 0); } }
 
   const step = (p) => sel.labStep(p, store.settings);
-  const STATE_WORD = { install: 'not installed', mode: 'needs an API key mode', key: 'needs its API key', signin: 'disabled in Phase 0', oss: 'needs OSS endpoint or Stand-in', test: 'needs the self-test', cooling: 'cooling down', ready: 'ready', other: 'not ready' };
+  const STATE_WORD = { install: 'not installed', mode: 'needs auth mode', key: 'needs its API key', signin: 'ready to sign in', oss: 'needs OSS endpoint or Stand-in', test: 'needs the self-test', cooling: 'cooling down', ready: 'ready', other: 'not ready' };
   /** "Claude Code ready, Antigravity CLI not installed" */
   const summary = (list) => list.filter((p) => p.id !== 'mock').map((p) => `${nameOf(p)} ${STATE_WORD[step(p)]}`).join(', ');
 
@@ -155,11 +164,15 @@ export function createLabs({ api, store, toasts, modals, openPanel }) {
       modals.open({
         title: `${nameOf(p)}: ${MODE_LABEL[mode].toLowerCase()}`,
         body: h('div.stack',
-          h('p.strong', 'Agents use the API key that you save in the Runtimes & Keys panel.'),
+          h('p.strong', mode === 'subscription'
+            ? 'Authenticate directly through OpenAI\'s official "Continue with ChatGPT" portal (OAuth 2.0 + PKCE).'
+            : 'Agents use the API key that you save in Settings -> API Keys Vault.'),
           lines.length ? h('ul.lab-policy', lines.map((l) => h('li', String(l)))) : h('p.dim', 'The hub sent no policy note for this mode.'),
           h('p', BILLING[mode]),
           note.url ? h('p', ui.extLink('Read the terms of the lab', note.url)) : null,
-          h('p.dim', 'Pressing the button records that you read this note. Consumer subscription logins are disabled in Phase 0.')),
+          h('p.dim', mode === 'subscription'
+            ? 'Anthropic and Google forbid third-party OAuth subscription mirroring; OpenAI officially supports Sign in with ChatGPT for local & open-source tools.'
+            : 'Pressing the button records that you read this note.')),
         buttons: [
           { label: 'Cancel', value: false },
           { label: MODE_LABEL[mode], primary: true, run: async () => {
@@ -174,7 +187,7 @@ export function createLabs({ api, store, toasts, modals, openPanel }) {
           if (ok !== true) return;
           const now = find(p.id) || p;
           const next = step(now);
-          if (next === 'key') say(`${nameOf(now)} uses an API key now. Save the key to finish.`, 'info', { action: { label: 'Open Keys', run: () => openPanel('keys', { lab: now.id }) } });
+          if (next === 'key') say(`${nameOf(now)} uses an API key now. Save the key to finish.`, 'info', { action: { label: 'Open Keys', run: () => openPanel('settings', { tab: 'keys', lab: now.id }) } });
           else if (next === 'signin') login(now, button);
           else if (next === 'test') say(`${nameOf(now)}: one step is left. Run the self-test.`, 'info', { action: { label: 'Test', run: () => test(now) } });
           else say(`${nameOf(now)}: ${MODE_LABEL[mode].toLowerCase()}.`);
@@ -246,7 +259,9 @@ export function createLabs({ api, store, toasts, modals, openPanel }) {
     modals.open({
       title: `Sign in to ${nameOf(p)}`,
       body: h('div.stack',
-        fresh ? h('p', 'You sign in yourself. The hub only opened Terminal with the command of the lab.')
+        fresh ? h('p', p.id === 'openai'
+          ? 'Your browser opened to OpenAI ("Continue with ChatGPT"). Sign in there, then click "I signed in".'
+          : 'You sign in yourself. The hub only opened Terminal with the command of the lab.')
           : h('div.callout.you', h('div.callout-title', since ? `A sign-in is open in Terminal since ${ui.fmt.time(since)}` : 'The sign-in runs in Terminal'),
             h('p', { style: { margin: 0 } }, `Finish it in that Terminal window. Do not start a second one.${AGAIN_HINTS[p.id] ? ' ' + AGAIN_HINTS[p.id] : ''}`)),
         h('div.lab-steps', list.map((s, i) => ui.checkbox(`${i + 1}. ${s}`, false))),

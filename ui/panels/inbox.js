@@ -72,7 +72,7 @@ function signinCard(ctx, it) {
   return frame(it, `${name} is not ready`,
     [h('p', String((lab && lab.reason) || it.text || 'This lab is not usable.')),
       h('p.dim', it.quiet ? 'No work waits for this lab right now.' : 'Work of the job waits for this lab.')],
-    [ui.btn('Open Keys', { tone: it.quiet ? undefined : 'primary', onClick: () => ctx.openPanel('keys', { lab: lab ? lab.id : it.id }) })]);
+    [ui.btn('Open Runtimes', { tone: it.quiet ? undefined : 'primary', onClick: () => ctx.openPanel('settings', { tab: 'runtimes', lab: lab ? lab.id : it.id }) })]);
 }
 
 function budgetCard(ctx, it) {
@@ -149,10 +149,10 @@ function reviewCard(ctx, it) {
     short ? h('p.ib-warn', `The maker says that ${acc.met} of ${acc.total} acceptance items are met. The hub refuses a PASS until all are met: say FIX, or let a boss change the task card first.`) : null,
     d ? ui.fold('Diff of this hand-in', () => diffSlot(ctx.api, `${jobUrl(it)}/diff?delivery=${enc(d.id)}`, (text) => diffView(text))) : null],
     doneId != null ? [
-      ui.btn('Pass', { tone: 'go', title: 'PASS: you accept the work', onClick: (e) => send('PASS', '', e.currentTarget, `You passed ${d ? d.taskId : 'the hand-in'}. The hub merges it and loads the truck.`) }),
-      ui.btn('Fix...', { tone: 'danger', title: 'FIX: not accepted. Say what must change.', onClick: (e) => fix(e.currentTarget) }),
-      h('button.linkish', { type: 'button', title: `Show post #${doneId} on the board`, onclick: () => ctx.openPanel('board', { re: doneId }) }, 'Open on the board'),
-    ] : [ui.btn('Open Board', { onClick: () => ctx.openPanel('board') })]);
+      ui.btn('Pass', { tone: 'go', title: 'PASS: you accept the work (merges onto truck)', onClick: (e) => send('PASS', '', e.currentTarget, `You passed ${d ? d.taskId : 'the hand-in'}. The hub merges it and loads the truck.`) }),
+      ui.btn('Fix (-1)...', { tone: 'danger', title: 'FIX: deny & send back (-1 agent rating). Say what must change.', onClick: (e) => fix(e.currentTarget) }),
+      h('button.linkish', { type: 'button', title: `Show post #${doneId} on the board`, onclick: () => ctx.openPanel('board', { view: 'all', re: doneId }) }, 'Show in feed'),
+    ] : [ui.btn('Show feed', { onClick: () => ctx.openPanel('board', { view: 'feed' }) })]);
 }
 
 /**
@@ -218,18 +218,18 @@ function agentFilesCard(ctx, it) {
 function requisitionCard(ctx, it) {
   const reqn = it.reqn;
   const domain = (reqn && reqn.domain) || it.domain || 'general';
-  const baseModel = (reqn && reqn.recommendedBaseModel) || '';
-  const harnessId = (reqn && reqn.recommendedHarnessId) || '';
-  const name = (reqn && reqn.suggestedCharacterName) || '';
-  return frame(it, `Phase 1 RFT requisition: ${domain}`,
-    [h('p', String((reqn && reqn.taskTitle) || it.text || 'No curated specialist exists for this domain yet.')),
+  const baseModel = (reqn && (reqn.candidateBaseModel || reqn.recommendedBaseModel)) || '';
+  const harnessId = (reqn && (reqn.harnessId || reqn.recommendedHarnessId)) || '';
+  const name = (reqn && (reqn.suggestedName || reqn.suggestedCharacterName)) || '';
+  return frame(it, `RL Agent Forge needed: ${domain}`,
+    [h('p', String((reqn && reqn.notes) || (reqn && reqn.taskTitle) || it.text || 'No certified specialist exists in the Employee Handbook for this domain yet.')),
       h('div.ib-facts',
         ui.domainChip(domain),
         name ? ui.chip(name, 'blue') : null,
         baseModel ? ui.chip(baseModel, 'plain') : null,
-        harnessId ? ui.chip('rack: ' + harnessId, 'green') : null),
-      h('p.dim', 'Phase 0 uses a base open-weight model + harness locally and queues this domain for Phase 1 RFT fine-tuning.')],
-    [ui.btn('Open RFT Queue', { tone: 'primary', onClick: () => ctx.openPanel('crew', { tab: 'rft' }) }),
+        harnessId ? ui.chip('harness: ' + harnessId, 'green') : null),
+      h('p.dim', 'Every Handbook specialist must pass RL training + Verification QA before staffing real work. Open the Agent Forge to train & verify this agent.')],
+    [ui.btn('Open Agent Forge', { tone: 'primary', onClick: () => ctx.openPanel('crew', { tab: 'forge' }) }),
       ui.btn('Dismiss', { onClick: (e) => act(ctx, e.currentTarget, async () => { const res = await ctx.api.post(`/api/requisitions/${enc(it.id)}/dismiss`); if (res) ctx.toast(`${it.id} dismissed.`); return res; }) })]);
 }
 
@@ -290,6 +290,9 @@ function render(container, ctx) {
   container.append(view.head, view.empty, view.list);
   refresh(ctx);
 }
+
+export function renderInboxItem(ctx, it) { return card(ctx, it); }
+export function inboxItemSig(ctx, it) { return cardSig(ctx, it); }
 
 export default {
   id: 'inbox',

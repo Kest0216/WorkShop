@@ -1,15 +1,16 @@
-// Settings panel (contract sections 13b and 14b). Data: ctx.store.settings. Save: PUT /api/settings { patch }.
-// Limits, crew presets (editable counts), reviewer and cross-lab review, pairing, safety mode, thrift slider with a plain-language label,
-// lab fallback, owner wait time, sound and scanlines. (Presence is the HERE / AWAY switch in the top bar.)
-// Look-and-sound switches apply at once. Everything else is a draft until "Save settings".
+// Settings panel: combines Shop Rules & Limits, Runtimes & Keys (OpenAI SIWC + Gemini/Claude API keys + Local OSS),
+// and the Universal RL Compute Port (Local Machine GPU + Remote Cluster on Droplet/Hostinger/RunPod + Personal local/ overlay).
+// Look-and-sound switches apply at once. Shop rules stay as a draft until "Save settings".
 
-import { h } from '../lib/dom.js';
+import { h, mount, clear } from '../lib/dom.js';
 import * as ui from '../lib/widgets.js';
+import { mountRuntimesKeysSection } from './keys.js';
 
 const fmt = ui.fmt;
+const enc = encodeURIComponent;
 
 // What the owner changed but did not save stays while the drawer is closed: path -> value.
-const keep = { draft: new Map(), advanced: false, limitsOpen: false };
+const keep = { tab: 'shop', draft: new Map(), advanced: false, limitsOpen: false, probeResult: null };
 let view = null;
 
 const get = (obj, path) => path.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), obj);
@@ -40,13 +41,11 @@ export function thriftWords(t) {
 
 // ------------------------------------------------------------------ fields
 
-/** Remember a change (or forget it when it equals the saved value) and update the save bar. */
 function set(ctx, path, v) {
   if (same(v, saved(ctx, path))) keep.draft.delete(path); else keep.draft.set(path, v);
   bar(ctx);
 }
 
-/** A number box bound to a settings path. opts: { min, max, step, unit, hint, int, dflt } (dflt shows when the hub has no value) */
 function num(ctx, path, label, { min = 0, max = 100000, step = 1, hint, unit, int = true, dflt = null } = {}) {
   const input = h('input', { type: 'number', min, max, step, inputMode: int ? 'numeric' : 'decimal' });
   const f = ui.field(unit ? `${label} (${unit})` : label, input, { hint });
@@ -87,16 +86,15 @@ function choice(ctx, path, legend, options, { hint, onPick } = {}) {
   return g;
 }
 
-// ------------------------------------------------------------------ sections
+// ------------------------------------------------------------------ Shop Rules & Limits sections
 
 function lookSection(ctx) {
-  // These apply at once: the scene and the beeper change now, and the hub stores the choice.
   const apply = async (key, v, box) => {
     if (key === 'scanlines') ctx.scene.setOptions({ scanlines: v });
     if (key === 'sound' && v) ctx.sound.play('test', true);
     const res = await ctx.api.put('/api/settings', { patch: { ui: { [key]: v } } });
     if (res && typeof res === 'object' && res.ui) ctx.store.set('settings', res);
-    else if (!res && view) { box.input.checked = !v; if (key === 'scanlines') ctx.scene.setOptions({ scanlines: !v }); } // the hub said no: put the switch back
+    else if (!res && view) { box.input.checked = !v; if (key === 'scanlines') ctx.scene.setOptions({ scanlines: !v }); }
   };
   const scan = ui.checkbox('Scanlines on the workshop scene', false, (v) => apply('scanlines', v, scan));
   const snd = ui.checkbox('Sound: a short beep when something waits for you, when the truck leaves and when a job is done', false, (v) => apply('sound', v, snd));
@@ -105,11 +103,10 @@ function lookSection(ctx) {
 }
 
 function youSection(ctx) {
-  // Presence itself is the HERE / AWAY switch in the top bar. This section holds how long a question waits while you are here.
   const note = h('p.dim');
   view.fields.push({ path: 'presence', valid: () => true, sync: () => {
     const away = (ctx.store.settings || {}).presence === 'away';
-    note.textContent = away ? 'You are away now (the switch in the top bar): the hub takes the default answer of a boss question at once. The question stays in your Inbox so you can overturn it.'
+    note.textContent = away ? 'You are away now (the switch in the top bar): the hub takes the default answer of a boss question at once. The question stays in your Board Action Deck so you can overturn it.'
       : `You are here now (the switch in the top bar): a boss question waits ${value(ctx, 'humanWaitMin') ?? 30} minutes for you. Then the hub takes the default.`;
   } });
   return ui.section('You',
@@ -133,7 +130,7 @@ function crewSection(ctx) {
   view.fields.push({ path: 'defaultCrew', valid: () => true, sync: () => { def.select.value = value(ctx, 'defaultCrew') || presets[0] || ''; } });
   return ui.section('Crew presets',
     h('table.table.st-crew',
-      h('thead', h('tr', h('th', { scope: 'col' }, 'Preset'), h('th', { scope: 'col', title: 'Orchestration officers & review gates (Frontier API key). 1 to 3.' }, 'Officers'), h('th', { scope: 'col', title: 'Team leads unblock specialists ($0 OSS). 0 to 3.' }, 'Leads'), h('th', { scope: 'col', title: 'OSS specialists build tasks. At most 8 benches. 1 to 8.' }, 'Specs'))),
+      h('thead', h('tr', h('th', { scope: 'col' }, 'Preset'), h('th', { scope: 'col', title: 'Orchestration officers & review gates (OpenAI SIWC or Gemini/Claude API key). 1 to 3.' }, 'Officers'), h('th', { scope: 'col', title: 'Team leads unblock specialists ($0 OSS). 0 to 3.' }, 'Leads'), h('th', { scope: 'col', title: 'RL-certified OSS specialists build tasks. 1 to 8.' }, 'Specs'))),
       h('tbody', presets.map((p) => h('tr', h('th.st-preset', { scope: 'row' }, p), cell(p, 'bosses', 1, 3), cell(p, 'managers', 0, 3), cell(p, 'makers', 1, 8))))),
     h('div.st-inline', ui.field('Default crew of a new work order', def)));
 }
@@ -144,7 +141,7 @@ function reviewSection(ctx) {
   view.fields.push({ path: 'review.reviewer', valid: () => true, sync: () => { who.select.value = String(value(ctx, 'review.reviewer') || 'boss'); } });
   return ui.section('Review',
     ui.field('Who reviews a hand-in', who, { hint: 'Nothing merges without a review. A boss gives the verdict.' }),
-    check(ctx, 'review.crossLab', 'Cross-runtime review: the review gate uses the other Frontier runtime when usable', { hint: 'A Frontier gate checks $0 OSS specialist hand-ins before merging.' }),
+    check(ctx, 'review.crossLab', 'Cross-runtime review: the review gate uses another Frontier runtime when usable', { hint: 'A Frontier gate checks $0 OSS specialist hand-ins before merging.' }),
     check(ctx, 'review.smallByManager', 'Small tasks go to the floor manager of the other lab first', { hint: 'Saves boss turns on S tasks that have no buddy check.' }),
     choice(ctx, 'pairing', 'Buddy check before the review', [
       { value: 'costly', label: 'Flagged tasks', note: 'Only the tasks that the plan marks as costly get a buddy check.' },
@@ -175,8 +172,8 @@ function routingSection(ctx) {
   return ui.section('Models and money', f,
     check(ctx, 'allowFallback', 'Lab fallback: route work to the other lab when one is cooling or missing', { hint: 'Off: work for a lab that is not usable waits until that lab is back.' }),
     check(ctx, 'approvePlan', 'New work orders start with "Show me the plan first"'),
-    num(ctx, 'budgetUsd', 'Default Frontier API budget', { min: 0, max: 100000, step: 1, int: false, unit: 'USD', hint: 'Applies to Frontier API-key turns. OSS open-weight & Stand-in turns cost $0.' }),
-    num(ctx, 'mockSpeed', 'Pace of the mock lab', { min: 0, max: 20, dflt: 1, hint: 'Only the mock lab, which uses no tokens. 0 runs with no pauses. A higher number is slower. The demo keeps its own slow pace.' }));
+    num(ctx, 'budgetUsd', 'Default Frontier API budget', { min: 0, max: 100000, step: 1, int: false, unit: 'USD', hint: 'Applies to metered API-key turns. OpenAI ChatGPT subscription & OSS open-weight turns cost $0 billed.' }),
+    num(ctx, 'mockSpeed', 'Pace of the mock lab', { min: 0, max: 20, dflt: 1, hint: 'Only the mock lab, which uses no tokens. 0 runs with no pauses. A higher number is slower.' }));
 }
 
 function limitsSection(ctx) {
@@ -189,7 +186,7 @@ function limitsSection(ctx) {
     num(ctx, 'limits.rotateTok.maker', 'Maker rotates over', { min: 5000, max: 2000000, step: 1000, unit: 'tokens' }),
     num(ctx, 'limits.rotateGapMin', 'Idle gap', { min: 1, max: 600, unit: 'minutes', hint: 'A boss or manager that sat idle this long starts fresh...' }),
     num(ctx, 'limits.rotateGapTok', '...when its context is over', { min: 1000, max: 2000000, step: 1000, unit: 'tokens' })), { open: true, onToggle: (v) => { keep.advanced = v; } });
-  adv.setOpen(keep.advanced); // built at once (its fields must exist to be saved), shown only when the owner opened it
+  adv.setOpen(keep.advanced);
   const fold = ui.fold('Show 22 advanced concurrency, retry & timeout limits', () => [
     h('div.caps.st-sub', 'Agents at work at once'),
     grid(num(ctx, 'limits.maxAgents', 'All labs', { min: 1, max: 14, hint: 'Turns that run at the same time.' }),
@@ -214,12 +211,116 @@ function limitsSection(ctx) {
   return ui.section('Advanced limits', fold);
 }
 
-// ------------------------------------------------------------------ save bar
+// ------------------------------------------------------------------ Universal RL Compute Port Tab
 
-function bar(ctx) {
-  if (!view) return;
+function drawRlPortTab(ctx, box) {
+  const rl = ctx.store.rlPort || { mode: 'sim', localUrl: 'http://127.0.0.1:8788', remoteUrl: '', providerHint: 'custom', hasAdapterScript: false };
+  const cfg = rl.config || rl;
+  const hasAdapter = !!(rl.hasAdapterScript || rl.hasCustomModule);
+  let curMode = rl.mode || cfg.mode || 'sim';
+  let curRemoteProv = rl.providerHint || cfg.providerHint || rl.remoteProvider || 'custom';
+  if (curRemoteProv === 'local-gpu') curRemoteProv = 'droplet';
+
+  const modeSeg = ui.segmented([
+    { value: 'local', label: 'Local Machine GPU', title: 'Run RL locally via local/rl-port.mjs or local HTTP trainer' },
+    { value: 'remote', label: 'Remote Compute Cluster', title: 'Offload RL to DigitalOcean Droplet, Hostinger VPS, RunPod, or any HTTPS endpoint' },
+    { value: 'sim', label: '[SIM] Demo Sandbox', title: 'Zero-GPU simulation for testing the Forge & QA pipeline' },
+  ], curMode, (v) => { curMode = v; syncVisibility(); });
+
+  const localUrlIn = h('input', { type: 'text', spellcheck: false, value: String(cfg.localUrl || rl.localUrl || 'http://127.0.0.1:8788'), placeholder: 'http://127.0.0.1:8788' });
+  const remoteProvSel = ui.select([
+    { value: 'droplet', label: 'DigitalOcean GPU Droplet' },
+    { value: 'hostinger', label: 'Hostinger VPS / Cloud' },
+    { value: 'runpod', label: 'RunPod / Lambda Cluster' },
+    { value: 'custom', label: 'Custom Remote Endpoint' },
+  ], curRemoteProv, { onchange: () => { curRemoteProv = remoteProvSel.select.value; } });
+  const remoteUrlIn = h('input', { type: 'text', spellcheck: false, value: String(cfg.remoteUrl || rl.remoteUrl || ''), placeholder: 'https://rl-cluster.example.com:8788' });
+
+  const localCfg = h('div.stack',
+    h('p.dim', hasAdapter
+      ? 'Detected personal adapter: local/rl-port.mjs (git-ignored). WorkShop invokes your local module directly.'
+      : 'No local/rl-port.mjs found yet. Copy starter template ports/rl/template-local.mjs -> local/rl-port.mjs or point to a local trainer daemon below:'),
+    ui.field('Local Trainer HTTP URL (used when local/rl-port.mjs is absent)', localUrlIn, { hint: 'Standard Universal RL Port v1 endpoints: GET /health, POST /jobs, GET /jobs/:id' }));
+
+  const remoteCfg = h('div.stack',
+    h('div.oss-cfg', ui.field('Cluster Provider', remoteProvSel), ui.field('Remote RL Port URL', remoteUrlIn)),
+    h('p.dim', 'Authentication: save a custom key with id ', h('span.code', 'rl-port'), ' (', h('span.code', 'RL_PORT_TOKEN'), ') in ',
+      h('button.linkish', { type: 'button', onclick: () => ctx.setParams({ tab: 'runtimes' }) }, 'Runtimes & Keys'),
+      ' — WorkShop sends it as Authorization: Bearer <token> and never writes it to disk.'));
+
+  const simCfg = h('div.callout',
+    h('div.callout-title', '[SIM] Zero-GPU Demo Trainer'),
+    h('p', { style: { margin: 0 } }, 'Simulates RL trajectory steps and runs full Verification & QA checks locally. Enrolled agents carry a clear [SIM] badge and are stored in git-ignored local/roster.json so public config/roster.json stays clean.'));
+
+  function syncVisibility() {
+    localCfg.hidden = curMode !== 'local';
+    remoteCfg.hidden = curMode !== 'remote';
+    simCfg.hidden = curMode !== 'sim';
+  }
+  syncVisibility();
+
+  const probeBox = h('div');
+  function renderProbe() {
+    const p = keep.probeResult;
+    if (!p) { clear(probeBox); return; }
+    mount(probeBox, h('div', { class: ['callout', p.ok ? 'ok' : 'bad'] },
+      h('div.callout-title', p.ok ? `Port Ready (${p.backend || p.engine || p.mode})` : 'Port Unreachable / Needs Wiring'),
+      h('p', { style: { margin: 0 } }, p.ok
+        ? `${p.detail || `Connected (${p.mode})`}${Array.isArray(p.gpus) && p.gpus.length ? ` · GPUs: ${p.gpus.join(', ')}` : ''}`
+        : String(p.detail || p.reason || 'Endpoint did not answer.')),
+      p.hint ? h('p.dim', { style: { margin: '4px 0 0' } }, String(p.hint)) : null));
+  }
+  renderProbe();
+
+  const saveProbeBtn = ui.btn('Save & Probe RL Port', { tone: 'go', onClick: (e) => ui.busy(e.currentTarget, async () => {
+    const updated = await ctx.api.put('/api/rl-port', {
+      mode: curMode,
+      localUrl: localUrlIn.value.trim(),
+      remoteUrl: remoteUrlIn.value.trim(),
+      providerHint: curMode === 'local' ? 'local-gpu' : curRemoteProv,
+    });
+    const status = await ctx.api.get('/api/rl-port', { quiet: true });
+    if (status) ctx.store.set('rlPort', status); else if (updated) ctx.store.set('rlPort', updated);
+    const probe = updated && Object.hasOwn(updated, 'ok') ? updated : await ctx.api.post('/api/rl-port/probe', {});
+    if (probe) {
+      keep.probeResult = probe;
+      renderProbe();
+      ctx.toast(probe.ok ? `RL Port (${curMode}) connected!` : `RL Port saved (${probe.detail || probe.reason || 'not reachable yet'}).`, probe.ok ? 'info' : 'warn');
+    }
+  }) });
+
+  const copyPromptBtn = ui.btn('Copy Agent Prompt to Wire My Port', { tone: 'primary', onClick: async () => {
+    const fresh = (await ctx.api.get('/api/rl-port', { quiet: true })) || rl;
+    const text = fresh.agentPrompt || 'Read ports/rl/PORT_CONTRACT.md and implement local/rl-port.mjs for my hardware.';
+    let copied = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); copied = true; } } catch { copied = false; }
+    if (copied) ctx.toast('Agent wiring prompt copied! Paste it into your coding agent to finalize the connection.');
+    else ctx.modal({ title: 'Universal RL Port · Agent Wiring Prompt', wide: true, buttons: [{ label: 'Close', primary: true }], body: h('pre.term', text) });
+  } });
+
+  mount(box,
+    ui.section(['Universal RL Compute Port', h('span.count', 'Open-Weight Specialist Post-Training')],
+      h('p.dim', 'WorkShop provides a universal RL port contract (ports/rl/PORT_CONTRACT.md) rather than hardcoding one GPU vendor. Connect your own Mac/Linux GPU or offload to DigitalOcean Droplet, Hostinger, or RunPod — or hand the 1-click prompt to your coding agent to wire your exact machine.'),
+      ui.group('Active RL Port Mode', modeSeg),
+      localCfg, remoteCfg, simCfg,
+      h('div.row', { style: { marginTop: '10px' } }, saveProbeBtn, copyPromptBtn),
+      probeBox),
+    ui.section(['Public Repo vs. Personal Machine Overlay', h('span.count', 'local/ is git-ignored')],
+      h('p.dim', 'This repository stays clean and universal for public GitHub users while your personal RL connections, private checkpoints, and custom harnesses live in git-ignored overlay files on this machine:'),
+      h('ul.list',
+        h('li.li', h('span.code', 'local/rl-port.mjs'), h('span.grow.dim', 'Personal local GPU or SSH/tunnel RL adapter'), ui.chip(hasAdapter ? 'present' : 'optional', hasAdapter ? 'green' : 'plain')),
+        h('li.li', h('span.code', 'local/rl-port.json'), h('span.grow.dim', 'Personal cluster URL & port mode override (no secrets)')),
+        h('li.li', h('span.code', 'local/roster.json'), h('span.grow.dim', 'Personal RL-trained specialists & owner +1/-1/0 ratings')),
+        h('li.li', h('span.code', 'local/harnesses.json'), h('span.grow.dim', 'Personal custom harnesses')),
+        h('li.li', h('span.code', 'ports/rl/PORT_CONTRACT.md'), h('span.grow.dim', 'Agent-readable Universal RL Port v1 specification & templates')))));
+}
+
+// ------------------------------------------------------------------ save bar & panel
+
+function bar() {
+  if (!view || !view.bar) return;
   const n = keep.draft.size;
-  view.bar.hidden = !n;
+  view.bar.hidden = !n || view.tab !== 'shop';
   view.count.textContent = `${fmt.plural(n, 'change')} not saved`;
 }
 
@@ -234,31 +335,82 @@ async function save(ctx, button) {
     keep.draft.clear();
     if (res && typeof res === 'object' && (res.limits || res.ui || res.crewPresets)) ctx.store.set('settings', res);
     else { const fresh = await ctx.api.get('/api/settings', { quiet: true }); if (fresh) ctx.store.set('settings', fresh); }
-    syncAll(); bar(ctx);
+    syncAll(); bar();
     ctx.toast('Settings saved.');
   });
 }
 
 function render(container, ctx) {
-  view = { fields: [], bar: null, count: h('span.grow') };
-  // "Save settings" is the submit button of the form, so Enter in a field saves. It must be a button that is drawn:
-  // WebKit (the Mac app) does not submit a form with many fields through a submit button that is hidden.
-  // The bar shows as soon as one value differs, so the button is there when Enter can save something.
+  const wantedTab = ctx.params.tab && ['runtimes', 'rlport', 'shop'].includes(String(ctx.params.tab))
+    ? String(ctx.params.tab)
+    : ctx.params.lab ? 'runtimes' : keep.tab;
+  keep.tab = wantedTab;
+
+  const tabs = h('div.panel-tabs',
+    ui.segmented([
+      { value: 'runtimes', label: 'Runtimes & Keys', title: 'OpenAI Sign in with ChatGPT, Gemini/Claude API keys, Local OSS & Keychain Vault' },
+      { value: 'rlport', label: 'RL Compute Port', title: 'Connect a Local GPU or Remote Cluster (Droplet / Hostinger / RunPod) + personal local/ overlay' },
+      { value: 'shop', label: 'Shop Rules & Limits', title: 'Look & sound, crew presets, review gates, sandbox safety, thrift & concurrency limits' },
+    ], wantedTab, (v) => { keep.tab = v; ctx.setParams({ tab: v, lab: null }); }));
+
+  view = { tab: wantedTab, fields: [], bar: null, count: h('span.grow'), runtimesSub: null, rlBox: h('div') };
+  container.append(tabs);
+
+  if (wantedTab === 'runtimes') {
+    const rtBox = h('div');
+    container.append(rtBox);
+    view.runtimesSub = mountRuntimesKeysSection(rtBox, ctx);
+    return;
+  }
+
+  if (wantedTab === 'rlport') {
+    container.append(view.rlBox);
+    if (!ctx.store.rlPort) {
+      ctx.api.get('/api/rl-port', { quiet: true }).then((d) => {
+        if (d) ctx.store.set('rlPort', d);
+        if (view && view.tab === 'rlport') drawRlPortTab(ctx, view.rlBox);
+      });
+    }
+    drawRlPortTab(ctx, view.rlBox);
+    return;
+  }
+
   const saveBtn = ui.btn('Save settings', { type: 'submit', tone: 'go' });
   view.bar = h('div.st-save', { hidden: true, role: 'status' }, view.count,
-    ui.btn('Discard', { small: true, onClick: () => { keep.draft.clear(); syncAll(); bar(ctx); } }),
+    ui.btn('Discard', { small: true, onClick: () => { keep.draft.clear(); syncAll(); bar(); } }),
     saveBtn);
   const form = h('form.st', { novalidate: true, onsubmit: (e) => { e.preventDefault(); if (keep.draft.size) save(ctx, saveBtn); } },
     lookSection(ctx), youSection(ctx), crewSection(ctx), reviewSection(ctx), safetySection(ctx), routingSection(ctx), limitsSection(ctx),
     view.bar);
   container.append(form);
-  syncAll(); bar(ctx);
+  syncAll(); bar();
 }
 
 export default {
   id: 'settings',
-  title: 'Settings',
+  title: 'Settings, Runtimes & Keys',
+  label: 'Settings',
+  short: 'Settings',
+  wide: true,
+  badge: ({ store, sel }) => {
+    const labs = sel.labs(store);
+    if (!labs.length) return 0;
+    const hasOss = labs.some((p) => p.id === 'oss' && p.usable);
+    const hasBoss = labs.some((p) => p.id !== 'oss' && p.usable);
+    return (hasOss ? 0 : 1) + (hasBoss ? 0 : 1);
+  },
   render,
-  update(ctx) { if (view && (ctx.changes.has('settings') || ctx.changes.has('state'))) { syncAll(); bar(ctx); } },
-  dispose() { view = null; },
+  update(ctx) {
+    if (!view) return;
+    if (view.tab === 'runtimes' && view.runtimesSub) { view.runtimesSub.update(); return; }
+    if (view.tab === 'rlport') {
+      if (ctx.changes.has('rlPort') || ctx.changes.has('state')) drawRlPortTab(ctx, view.rlBox);
+      return;
+    }
+    if (ctx.changes.has('settings') || ctx.changes.has('state')) { syncAll(); bar(); }
+  },
+  dispose() {
+    if (view && view.runtimesSub) view.runtimesSub.dispose();
+    view = null;
+  },
 };

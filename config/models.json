@@ -1317,10 +1317,14 @@
         "out": 50,
         "note": "Above 272,000 input tokens: 2x input price, 1.5x output price."
       },
-      "efforts": [],
-      "enabled": false,
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "enabled": true,
       "estimated": false,
-      "planNote": "Disabled: WorkShop has no OpenAI CLI adapter yet. Effort levels are not verified.",
+      "planNote": "Frontier Orchestration Officer & Final Review Gate (Sign in with ChatGPT subscription or OPENAI_API_KEY).",
       "benchlmSlug": "gpt-6-astra",
       "scores": {
         "overall": 85.65,
@@ -1361,7 +1365,8 @@
       "provider": "openai",
       "label": "GPT-6.1 Sol",
       "tiers": [
-        "manager"
+        "manager",
+        "boss"
       ],
       "power": 4,
       "price": {
@@ -1369,10 +1374,14 @@
         "out": 10,
         "note": "Above 272,000 input tokens: 2x input price, 1.5x output price."
       },
-      "efforts": [],
-      "enabled": false,
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "enabled": true,
       "estimated": false,
-      "planNote": "Disabled: WorkShop has no OpenAI CLI adapter yet. Effort levels are not verified.",
+      "planNote": "Frontier Officer & Gate fallback (Sign in with ChatGPT subscription or OPENAI_API_KEY).",
       "benchlmSlug": "gpt-6-1-sol",
       "scores": {
         "overall": 84.6,

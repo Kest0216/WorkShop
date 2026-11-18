@@ -50,7 +50,7 @@ export function createOwner(ctx) {
     let budgetUsd = input.budgetUsd ?? null;
     if (budgetUsd !== null && !(typeof budgetUsd === 'number' && Number.isFinite(budgetUsd) && budgetUsd >= 0)) throw httpError(400, 'budgetUsd must be a number of dollars.');
     if (budgetUsd === null && !mock) {
-      const billed = ['claude', 'gemini'].filter((id) => s.auth?.[id] === 'apikey' && ctx.providers?.usable?.(id));
+      const billed = ['claude', 'gemini', 'openai'].filter((id) => s.auth?.[id] === 'apikey' && ctx.providers?.usable?.(id));
       if (billed.length) throw httpError(400, `Give budgetUsd: ${billed.join(' and ')} bill per token (API-key mode).`);
     }
     const job = {
@@ -173,7 +173,22 @@ export function createOwner(ctx) {
   O.discardTruck = async (id) => {
     const job = need(ctx.job(id));
     if (job.status !== 'cancelled') throw httpError(409, 'Discard is for a cancelled job with a loaded truck.');
-    for (const d of ctx.deliveriesOf(id, (x) => x.status === 'loaded')) ctx.patch('deliveries', d.id, { status: 'rejected', discarded: true });
+    for (const d of ctx.deliveriesOf(id, (x) => x.status === 'loaded')) {
+      const t = ctx.task(d.taskId);
+      const maker = d.makerId ? ctx.agent(d.makerId) : null;
+      const rosterId = d.rosterId || t?.rosterId || maker?.rosterId || null;
+      if (rosterId) {
+        ctx.roster?.recordRating?.(rosterId, {
+          delta: 0,
+          outcome: 'discarded',
+          jobId: id,
+          taskId: d.taskId,
+          deliveryId: d.id,
+          note: t?.title ? `Discarded (neutral): ${t.title}` : 'Discarded by owner (no rating impact)',
+        });
+      }
+      ctx.patch('deliveries', d.id, { status: 'rejected', discarded: true, ownerRating: 0 });
+    }
     ctx.patch('jobs', id, { truckKept: false });
     await O.dropIntegration(ctx.job(id));
     await ctx.flush();
@@ -243,7 +258,30 @@ export function createOwner(ctx) {
     return req;
   }
   O.addReq = (jobId, { text } = {}) => ownerChange(jobId, text);
-  O.requestChanges = (jobId, { deliveryId, text, reqId } = {}) => ownerChange(jobId, text, deliveryId ?? null, reqId ?? null);
+  O.requestChanges = (jobId, { deliveryId, text, reqId } = {}) => {
+    const res = ownerChange(jobId, text, deliveryId ?? null, reqId ?? null);
+    // Record -1 owner denial rating when the owner rejects/requests changes on shipped-to-truck work
+    const targets = deliveryId
+      ? [ctx.delivery(deliveryId)].filter(Boolean)
+      : (!reqId ? ctx.deliveriesOf(jobId, (d) => d.status === 'loaded' && d.ownerRating !== -1) : []);
+    for (const d of targets) {
+      const t = ctx.task(d.taskId);
+      const maker = d.makerId ? ctx.agent(d.makerId) : null;
+      const rosterId = d.rosterId || t?.rosterId || maker?.rosterId || null;
+      ctx.patch('deliveries', d.id, { ownerRating: -1 });
+      if (rosterId) {
+        ctx.roster?.recordRating?.(rosterId, {
+          delta: -1,
+          outcome: 'denied',
+          jobId,
+          taskId: d.taskId,
+          deliveryId: d.id,
+          note: String(text || '').slice(0, 240),
+        });
+      }
+    }
+    return res;
+  };
 
   O.waiveReq = (jobId, reqId, { reason } = {}) => {
     const job = need(ctx.job(jobId));

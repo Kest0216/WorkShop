@@ -214,8 +214,8 @@ function refresh(ctx) {
 
   part(view.leaders, [stamp, JSON.stringify(L || null).length, isObj(L) ? Object.keys(L).length : 0, r.models.map((m) => (m.enabled !== false ? 1 : 0)).join('')].join('|'), () => ui.section(['Leaders by domain', h('span.count', 'who the router ranks first')],
     isObj(L) ? leaders(ctx, r, L) : h('p.dim', 'The hub sent no leaders.'),
-    h('p.dim.mo-hint', 'The ranking counts quality only. The pick for a task also weighs cost by thrift, runtime load and Phase 0 roles (Frontier officers & review gates via API keys; $0 OSS specialists on benches). ',
-      'Gemini / TypeSafe decision routing turns on with your Gemini or TypeSafe key in the ', h('button.linkish', { type: 'button', onclick: () => ctx.openPanel('keys') }, 'Runtimes & Keys panel'), '.')));
+    h('p.dim.mo-hint', 'The ranking counts quality only. The pick for a task also weighs cost by thrift, runtime load and roles (Frontier officers & review gates via OpenAI SIWC or Gemini/Claude API keys; RL-certified $0 OSS specialists on benches). ',
+      'Configure runtimes & keys in ', h('button.linkish', { type: 'button', onclick: () => ctx.openPanel('settings', { tab: 'runtimes' }) }, 'Settings -> Runtimes & Keys'), '.')));
 }
 
 /** Say so when score columns are off screen to the right (the scroll bar sits at the foot of a long table). */
@@ -258,6 +258,14 @@ function render(container, ctx) {
   container.append(view.empty, view.source, view.reg, view.leaders, view.save);
   window.addEventListener('resize', view.onResize);
   refresh(ctx);
+}
+
+export function mountModelsSection(container, ctx) {
+  render(container, ctx);
+  return {
+    update: () => refresh(ctx),
+    dispose: () => { if (view) window.removeEventListener('resize', view.onResize); view = null; },
+  };
 }
 
 export default {

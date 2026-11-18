@@ -9,6 +9,9 @@ config/settings.json.bak
 config/settings.json.*.tmp
 config/*.bak
 config/*.tmp
+# Personal local overlay: private RL compute ports, cluster connections, and personal trained agents stay off public GitHub.
+local/*
+!local/README.md
 macapp/build/
 .shop/
 .agents/
