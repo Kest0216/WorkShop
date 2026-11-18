@@ -15,6 +15,7 @@ import path from 'node:path';
 import { openClosedPipe } from '../shellenv.js';
 import { createClaudeAdapter } from './claude.js';
 import { createGeminiAdapter } from './gemini.js';
+import { createOpenaiAdapter } from './openai.js';
 import { createMockAdapter } from './mock.js';
 import { createOssAdapter, probeEndpoint } from './oss.js';
 
@@ -117,17 +118,22 @@ export function createProviders({
     try { log(level, msg, data); } catch { /* a broken logger must not break the registry */ }
   };
   const limits = { ...TIMEOUTS, ...timeouts };
+  const openBrowserUrl = async (targetUrl) => {
+    const r = await runCommand(openPath, [String(targetUrl)], { env: shellEnv.base?.() || process.env, timeoutMs: limits.open });
+    return r.code === 0;
+  };
   const adapters = {
     claude: adapterOverrides.claude ?? createClaudeAdapter({ shellEnv, log }),
     gemini: adapterOverrides.gemini ?? createGeminiAdapter({ shellEnv, log }),
+    openai: adapterOverrides.openai ?? createOpenaiAdapter({ shellEnv, getSettings, secrets, openUrl: openBrowserUrl, log, now }),
     oss: adapterOverrides.oss ?? createOssAdapter({ shellEnv, getSettings, log }),
     mock: adapterOverrides.mock ?? createMockAdapter({ shellEnv, log }),
   };
   const ids = Object.keys(adapters);
   const state = Object.fromEntries(ids.map((id) => [id, {
-    installed: id === 'mock' || id === 'oss',
-    version: id === 'mock' ? '1' : id === 'oss' ? '0.1.0' : null,
-    path: id === 'mock' || id === 'oss' ? process.execPath : null,
+    installed: id === 'mock' || id === 'oss' || id === 'openai',
+    version: id === 'mock' ? '1' : id === 'oss' ? '0.1.0' : id === 'openai' ? 'siwc-1' : null,
+    path: id === 'mock' || id === 'oss' || id === 'openai' ? process.execPath : null,
     auth: id === 'mock' ? 'ok' : 'unknown',
     models: null, keySet: false, coolTimer: null, limit: null,
     detail: null,
@@ -153,6 +159,7 @@ export function createProviders({
     if (id === 'mock') return null;
     if (id === 'oss') return ossCfg().standIn === true ? 'standin' : 'local';
     const mode = settings().auth?.[id];
+    if (id === 'openai' && (mode === 'apikey' || mode === 'subscription')) return mode;
     return mode === 'apikey' ? 'apikey' : null;
   };
   const saved = (id) => settings().providers?.[id] ?? {};
@@ -188,6 +195,17 @@ export function createProviders({
       const mode = modeOf('oss');
       if (mode === 'standin') return lab ? pausedText(lab) : null;
       if (s.auth !== 'ok') return s.detail || 'Open-Source endpoint is not reachable. Start Ollama/vLLM or enable Phase 0 Stand-in mode.';
+      if (lab) return pausedText(lab);
+      return null;
+    }
+    if (id === 'openai') {
+      if (!s.installed) return `${label} is not installed.`;
+      const mode = modeOf('openai');
+      if (!mode) return 'Choose "Continue with ChatGPT" (subscription) or API key mode.';
+      if (!acked('openai')) return REASON_ACK;
+      if (mode === 'apikey' && !s.keySet) return 'No API key is saved for OpenAI.';
+      if (mode === 'subscription' && s.auth !== 'ok') return 'Click "Continue with ChatGPT" to connect your OpenAI subscription.';
+      if (s.turnAuthFailed) return `OpenAI refused the ${mode === 'subscription' ? 'ChatGPT session' : 'API key'}. Sign in again or save a new key.`;
       if (lab) return pausedText(lab);
       return null;
     }
@@ -271,9 +289,18 @@ export function createProviders({
     }
   }
 
-  /** The API key variable of one lab, in API key mode (or optional OSS bearer token). {} otherwise. Never logged. */
+  /** The API key variable of one lab, in API key mode (or OpenAI OAuth token / optional OSS bearer token). {} otherwise. Never logged. */
   async function keyEnv(id) {
     const adapter = get(id);
+    if (id === 'openai' && modeOf('openai') === 'subscription') {
+      try {
+        const bundle = await adapter.readOAuth?.();
+        if (bundle?.accessToken) return { OPENAI_OAUTH_TOKEN: bundle.accessToken };
+      } catch (err) {
+        say('warn', 'providers: cannot read OpenAI OAuth session', { error: err?.message ?? String(err) });
+      }
+      return {};
+    }
     if (!adapter.keyVar) return {};
     if (id !== 'oss' && modeOf(id) !== 'apikey') return {};
     try {
@@ -352,7 +379,23 @@ export function createProviders({
     s.detail = res.detail || null;
   }
 
-  /** Cheap and safe: binary lookup, `claude --version`, optional local OSS probe. Never runs agy. */
+  async function detectOpenai() {
+    const adapter = adapters.openai;
+    const s = state.openai;
+    const file = adapter.locate?.() ?? null;
+    if (!file) {
+      Object.assign(s, { installed: false, version: null, path: null, auth: 'unknown' });
+      return;
+    }
+    s.installed = true;
+    s.path = file;
+    s.version = 'siwc-1';
+    let hasOauth = false;
+    try { hasOauth = Boolean(await adapter.hasOAuthSession?.()); } catch { hasOauth = false; }
+    s.auth = hasOauth ? (s.turnAuthFailed ? 'none' : 'ok') : (s.keySet ? 'ok' : 'none');
+  }
+
+  /** Cheap and safe: binary lookup, `claude --version`, OpenAI OAuth check, optional local OSS probe. Never runs agy. */
   function detect({ force = false } = {}) {
     if (detecting) return detecting;
     if (!force && detectedAt && now() - detectedAt < DETECT_FRESH_MS) return Promise.resolve(list());
@@ -363,6 +406,7 @@ export function createProviders({
           refreshKeys(),
           detectOss({ activeProbe: false }),
         ]);
+        await detectOpenai();
         detectGemini();
         detectedAt = now();
       } catch (err) {
@@ -439,6 +483,10 @@ export function createProviders({
       if (detecting) await detecting;
       state.claude.turnAuthFailed = false;
       await detect({ force: true });
+    } else if (id === 'openai') {
+      state.openai.turnAuthFailed = false;
+      await refreshKeys();
+      await detectOpenai();
     } else if (id === 'oss') {
       await refreshKeys();
       await detectOss({ activeProbe: true });
@@ -565,11 +613,20 @@ export function createProviders({
     if (!same) emit();
   }
 
-  /** Consumer subscription login is disabled in Phase 0; Frontier labs use API keys only. */
+  /**
+   * Anthropic & Google strictly forbid third-party subscription mirroring (API keys only).
+   * OpenAI officially provides "Sign in with ChatGPT" (OAuth 2.0 + PKCE portal login).
+   */
   async function openLogin(id) {
     const adapter = get(id);
     if (id === 'mock' || id === 'oss') throw fail(400, `${adapter.label} needs no sign-in.`);
-    throw fail(400, 'Consumer subscription sign-in is disabled; configure an API key instead.');
+    if (id === 'openai' && typeof adapter.startOAuthLogin === 'function') {
+      return adapter.startOAuthLogin({
+        dataDir: paths.data ?? null,
+        onSignedIn: () => checkAuth('openai'),
+      });
+    }
+    throw fail(400, 'Consumer subscription sign-in is disabled for Anthropic and Google; configure an API key instead.');
   }
 
   /** fn(statuses) is called whenever a status changes. Returns an unsubscribe function. */
@@ -598,6 +655,7 @@ export function createProviders({
     /** Call after a settings or key change: re-reads the keys and tells the listeners when a status changed. */
     async refresh() {
       await refreshKeys();
+      await detectOpenai();
       detectGemini();
       if (ossCfg().standIn === true) {
         await detectOss({ activeProbe: false });
@@ -641,6 +699,7 @@ export function createProviders({
       for (const id of ids) {
         if (state[id].coolTimer) clearTimeout(state[id].coolTimer);
         state[id].coolTimer = null;
+        try { adapters[id]?.dispose?.(); } catch { /* ignore */ }
       }
     },
   };

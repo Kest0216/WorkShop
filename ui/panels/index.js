@@ -26,14 +26,17 @@
 //   avatar      PNG data URL of the agent's sprite from the scene, or null
 
 import workorder from './workorder.js';
-import inbox from './inbox.js';
-import blueprint from './blueprint.js';
 import board from './board.js';
+import blueprint from './blueprint.js';
 import truck from './truck.js';
 import crew from './crew.js';
-import toolkit from './toolkit.js';
-import models from './models.js';
-import keys from './keys.js';
 import settings from './settings.js';
 
-export const PANELS = [workorder, inbox, blueprint, board, truck, crew, toolkit, models, keys, settings];
+// Consolidated 6-button taskbar:
+//   1. + Order (workorder)
+//   2. Board (combines Inbox + ShopTalk Board)
+//   3. Blueprint (blueprint)
+//   4. Truck (truck)
+//   5. Team (combines Active Floor, Employee Handbook, Agent Forge, Harness Rack, Models & Project Tools)
+//   6. Settings (absorbs Runtimes, OpenAI SIWC / API Keys Vault, Universal RL Compute Port & Shop Limits)
+export const PANELS = [workorder, board, blueprint, truck, crew, settings];

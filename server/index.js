@@ -23,7 +23,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { paths as makePaths, createSettings } from './config.js';
+import { paths as makePaths, overlayPaths, createSettings } from './config.js';
 import { createStore } from './store.js';
 import { createHttp } from './http.js';
 import { createRedactor } from './redact.js';
@@ -32,12 +32,14 @@ import { createShellEnv } from './shellenv.js';
 import { createProviders, runCommand } from './providers/index.js';
 import { createClaudeAdapter } from './providers/claude.js';
 import { createGeminiAdapter } from './providers/gemini.js';
+import { createOpenaiAdapter } from './providers/openai.js';
 import { createOssAdapter } from './providers/oss.js';
 import { createMcp } from './mcp.js';
 import { createGit } from './gitops.js';
 import { createRouter } from './router.js';
 import { createHarnesses } from './harnesses.js';
 import { createRoster } from './roster.js';
+import { createRlPort } from './rlport.js';
 import { createTraining } from './training.js';
 import { createBenchlm } from './benchlm.js';
 import { createRunner } from './runner.js';
@@ -286,6 +288,7 @@ function mockOnlyAdapters({ shellEnv, log }) {
   return {
     claude: { ...createClaudeAdapter({ shellEnv, log }), locate: () => null },
     gemini: { ...createGeminiAdapter({ shellEnv, log }), locate: () => null },
+    openai: { ...createOpenaiAdapter({ shellEnv, log }), locate: () => null },
     oss: {
       ...createOssAdapter({ shellEnv, getSettings: () => ({ oss: { standIn: false, baseUrl: 'http://127.0.0.1:1' } }), log }),
       probeEndpoint: async () => ({ ok: false, models: null, detail: 'mock-only mode' }),
@@ -345,14 +348,19 @@ export async function createApp(options = {}) {
     const providers = createProviders({ secrets, getSettings, updateSettings, shellEnv, paths, log, adapters: adapterSet });
     cleanups.push(() => providers.dispose?.());
 
-    // 5. MCP, git, router, Harness Rack, Employee Book, Phase 1 RFT queue, benchmarks, decider.
+    // 5. MCP, git, router, Harness Rack, Employee Handbook, Universal RL Port, RFT queue, benchmarks, decider.
+    const overlay = overlayPaths(paths);
+    // Use git-ignored personal `local/` overlay only when running on the real repo configDir (not isolated temp test dirs).
+    const useLocalOverlay = !configDir && fs.existsSync(overlay.local);
+    const localDir = useLocalOverlay ? overlay.local : null;
     const mcp = createMcp({ store, redactor, log });
     const git = createGit({ paths, getSettings, redactor, log });
     cleanups.push(() => git.shutdown?.());
     const router = createRouter({ modelsPath: path.join(paths.config, 'models.json'), providers, getSettings, log });
-    const harnesses = createHarnesses({ configDir: paths.config, log, now });
-    const roster = createRoster({ configDir: paths.config, harnesses, log, now });
-    const training = createTraining({ dataDir: paths.data, roster, harnesses, log, now });
+    const harnesses = createHarnesses({ configDir: paths.config, localDir, log, now });
+    const roster = createRoster({ configDir: paths.config, localDir, harnesses, log, now });
+    const rlPort = createRlPort({ localDir: localDir ?? overlay.local, getSettings, secrets, router, fetchImpl, log, now });
+    const training = createTraining({ dataDir: paths.data, roster, harnesses, rlPort, log, now });
     const benchlm = createBenchlm({ fetchImpl, cachePath: path.join(paths.data, 'benchlm-cache.json'), log });
     const decider = createDecider({ secrets, getSettings, fetchImpl, log, redactor });
     await decider.refresh();
@@ -403,7 +411,7 @@ export async function createApp(options = {}) {
     const toolkit = createToolkit({ store, dataDir: paths.data, shellEnv, orch, git, redactor, log, getSettings, reveal });
     const api = mountApi(http, {
       store, board, orch, providers, secrets, settings, router, benchlm, git, toolkit, decider, runner, mcp,
-      harnesses, roster, training,
+      harnesses, roster, training, rlPort,
       pickFolder, reveal, log, now, version: VERSION,
     });
     cleanups.push(() => api.close());
@@ -521,7 +529,7 @@ export async function createApp(options = {}) {
 
     return {
       url: listening.url, port: listening.port, ownerKey, close, beat, pauseLive, releaseLock: () => lock.release(),
-      orch, store, board, mcp, runner, providers, secrets, settings, router, harnesses, roster, training, git, toolkit, decider, http, paths, redactor, log,
+      orch, store, board, mcp, runner, providers, secrets, settings, router, harnesses, roster, training, rlPort, git, toolkit, decider, http, paths, redactor, log,
     };
   } catch (err) {
     for (const fn of cleanups.splice(0).reverse()) {

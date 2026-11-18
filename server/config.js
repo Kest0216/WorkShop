@@ -75,6 +75,23 @@ export const DEFAULT_SETTINGS = deepFreeze({
   ui: { sound: false, scanlines: false },
 });
 
+/** Default RL Compute Port configuration (merged with settings.rlPort and optional local/rl-port.json). */
+export const DEFAULT_RL_PORT = deepFreeze({
+  mode: 'local', // 'local' | 'remote' | 'sim'
+  localUrl: 'http://127.0.0.1:17890',
+  remoteUrl: '',
+  providerHint: 'local-gpu', // 'local-gpu' | 'droplet' | 'hostinger' | 'runpod' | 'custom'
+});
+
+/** Resolve the git-ignored personal overlay folder (`<root>/local`) and public port contracts (`<root>/ports`). */
+export function overlayPaths(resolvedPaths = paths()) {
+  const base = resolvedPaths?.root ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  return {
+    local: path.join(base, 'local'),
+    ports: path.join(base, 'ports'),
+  };
+}
+
 /**
  * Resolve the app folders.
  * @param {{ root?: string, dataDir?: string, projectsDir?: string, configDir?: string }} [opts]
@@ -143,13 +160,20 @@ const isSelfTest = isRecord((v) => (typeof v.version === 'string' || v.version =
  * "null or a number". A key with a rule is checked by the rule alone. Rows: [path, test, wanted form].
  */
 const oneOf = (...values) => (v) => values.includes(v);
+const isAckOpenai = isRecord((v) => (v.mode === 'apikey' || v.mode === 'subscription') && isAmount(v.ts));
 const VALUE_RULES = [
+  [/^auth\.openai$/, oneOf(null, 'apikey', 'subscription'), "null, 'apikey' or 'subscription'"],
   [/^auth\.[^.]+$/, oneOf(null, 'apikey'), "null or 'apikey'"],
+  [/^authAck\.openai$/, isAckOpenai, "null or { mode: 'apikey'|'subscription', ts: number }"],
   [/^authAck\.[^.]+$/, isAck, "null or { mode: 'apikey', ts: number }"],
   [/^selfTest\.[^.]+$/, isSelfTest, 'null or { version: string|null, ok: boolean, core?: [check], advisory?: [check], ts: number }'],
-  [/^oss\.engine$/, oneOf('ollama', 'vllm', 'sglang', 'llamacpp', 'custom'), "'ollama', 'vllm', 'sglang', 'llamacpp' or 'custom'"],
+  [/^oss\.engine$/, oneOf('ollama', 'vllm', 'sglang', 'llamacpp', 'openai', 'command', 'custom'), "'ollama', 'vllm', 'sglang', 'llamacpp', 'openai', 'command' or 'custom'"],
   [/^oss\.baseUrl$/, (v) => typeof v === 'string' && /^https?:\/\/[^\s]+$/.test(v) && v.length <= 300, 'an http:// or https:// URL'],
   [/^oss\.standIn$/, (v) => typeof v === 'boolean', 'true or false'],
+  [/^rlPort\.mode$/, oneOf('local', 'remote', 'sim'), "'local', 'remote' or 'sim'"],
+  [/^rlPort\.localUrl$/, (v) => typeof v === 'string' && /^https?:\/\/[^\s]+$/.test(v) && v.length <= 300, 'an http:// or https:// URL'],
+  [/^rlPort\.remoteUrl$/, (v) => typeof v === 'string' && (v === '' || (/^https?:\/\/[^\s]+$/.test(v) && v.length <= 300)), 'empty or an http:// or https:// URL'],
+  [/^rlPort\.providerHint$/, oneOf('local-gpu', 'droplet', 'hostinger', 'runpod', 'custom'), "'local-gpu', 'droplet', 'hostinger', 'runpod' or 'custom'"],
   [/^budgetUsd$/, (v) => v === null || isAmount(v), 'null or a number from 0 up'],
   [/^safety$/, oneOf('sandboxed', 'trusting'), "'sandboxed' or 'trusting'"],
   [/^thrift$/, (v) => isAmount(v) && v <= 1, 'a number from 0 to 1'],

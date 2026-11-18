@@ -135,7 +135,15 @@ function fileList(ctx, files, { urlFor, open, focus, tag = '' }) {
 
 const who = (ctx, id) => {
   const a = id ? ctx.store.get('agents', id) : null;
-  if (a) return h('span.tk-who', ui.faceEl(a, ctx.avatar(a, 2)), h('span.strong', a.name), ui.labChip(a.provider, a.modelLabel || a.model || a.provider));
+  if (a) {
+    const rEntry = a.rosterId && Array.isArray(ctx.store.roster) ? ctx.store.roster.find((x) => x.id === a.rosterId) : null;
+    const score = rEntry && rEntry.ratings ? Number(rEntry.ratings.score) || 0 : null;
+    const scoreChip = score !== null
+      ? ui.chip(`rating ${score > 0 ? '+' + score : score}`, score > 0 ? 'green' : score < 0 ? 'red' : 'plain',
+          { title: `Owner ship rating for ${rEntry.name}: +${rEntry.ratings.shipped || 0} shipped, -${rEntry.ratings.denied || 0} denied, ${rEntry.ratings.discarded || 0} discarded (neutral)` })
+      : null;
+    return h('span.tk-who', ui.faceEl(a, ctx.avatar(a, 2)), h('span.strong', a.name), ui.labChip(a.provider, a.modelLabel || a.model || a.provider), scoreChip);
+  }
   return id === ctx.sel.OWNER ? h('span.strong', 'you') : h('span.dim', id ? String(id) : 'nobody'); // the owner gives the verdict when the reviewers are used up
 };
 
@@ -220,12 +228,17 @@ function crateNode(ctx, job, d, i, total, canShip) {
     check && check.tail ? ui.fold('Output of the check', () => h('pre.term.tk-tail', check.cmd ? `$ ${check.cmd}\n` : '', String(check.tail))) : null,
     h('div.tk-acts',
       bFiles, bDiff,
-      canShip && i < total - 1 ? ui.btn('Ship up to here', { small: true, tone: 'go', title: `Ship crates 1 to ${i + 1}: every crate the hub merged up to this one. The crates after it stay on the truck.`, onClick: (e) => shipUpTo(ctx, job, d, e.currentTarget) }) : null,
-      ctx.sel.isOpen(job) ? ui.btn('Request changes', { small: true, onClick: (e) => requestChanges(ctx, job, d, e.currentTarget) }) : null),
+      canShip && i < total - 1 ? ui.btn('Ship up to here (+1)', { small: true, tone: 'go', title: `Ship crates 1 to ${i + 1} (+1 agent rating per crate). The crates after it stay on the truck.`, onClick: (e) => shipUpTo(ctx, job, d, e.currentTarget) }) : null,
+      ctx.sel.isOpen(job) ? ui.btn('Deny / Request changes (-1)', { small: true, tone: 'danger', title: 'Deny this crate (-1 agent rating with reason) and request changes', onClick: (e) => requestChanges(ctx, job, d, e.currentTarget) }) : null),
     filesBox, diffBox);
 }
 
 // ------------------------------------------------------------------ actions
+
+async function syncRoster(ctx) {
+  const fresh = await ctx.api.get('/api/roster', { quiet: true });
+  if (Array.isArray(fresh)) ctx.store.set('roster', fresh);
+}
 
 function shipText(job, project, crates, sha, truck) {
   const branch = (project && project.targetBranch) || 'the target branch';
@@ -233,6 +246,7 @@ function shipText(job, project, crates, sha, truck) {
   return [
     `${branch} moves forward to commit ${fmt.sha(sha)}. Nothing is forced.`,
     `Crates: ${crates.map((d) => d.taskId).join(', ')}.`,
+    'Agent rating: +1 per shipped crate is recorded in the Employee Handbook.',
     open ? `${fmt.plural(open, 'requirement is', 'requirements are')} not verified yet.` : null,
     'A shipped crate cannot come back from here.',
   ].filter(Boolean).join('\n');
@@ -273,7 +287,8 @@ async function ship(ctx, job, button, pick) {
       return;
     }
     const left = Number(res.left) || 0;
-    ctx.toast(`Shipped ${fmt.plural(crates.length, 'crate')}. ${left ? `${fmt.plural(left, 'crate stays', 'crates stay')} on the truck.` : 'The truck is empty.'}`);
+    ctx.toast(`Shipped ${fmt.plural(crates.length, 'crate')} (+1 agent rating). ${left ? `${fmt.plural(left, 'crate stays', 'crates stay')} on the truck.` : 'The truck is empty.'}`);
+    syncRoster(ctx);
     load(ctx);
   } finally { mine.shipping = false; }
 }
@@ -291,21 +306,48 @@ function shipUpTo(ctx, job, d, button) {
 }
 
 async function requestChanges(ctx, job, d, button) {
-  const text = await ctx.prompt({ title: d ? `Request changes to ${d.taskId}` : 'Request changes', label: 'What should change? The lead boss turns your words into a requirement and a task.', multiline: true, okLabel: 'Send request', placeholder: d ? 'Example: The list must also show the cooking time.' : 'Example: Add a dark mode.' });
+  const text = await ctx.prompt({
+    title: d ? `Deny & request changes to ${d.taskId} (-1 rating)` : 'Deny load & request changes (-1 rating)',
+    label: 'Why was this denied and what must change? Logs -1 on the specialist with this reason so you can audit performance over time.',
+    multiline: true,
+    okLabel: 'Deny & send changes (-1)',
+    placeholder: d ? 'Example: Missing edge-case error handling in public/list.js.' : 'Example: Dark mode toggle breaks contrast.',
+  });
   if (!text) return;
   await ui.busy(button, async () => {
     const body = { text };
     if (d) body.deliveryId = d.id;
     const res = await ctx.api.post(`/api/jobs/${enc(job.id)}/changes`, body);
-    if (res) ctx.toast(`The lead boss has your request${res.req && res.req.id ? ` (requirement ${res.req.id})` : ''}. The job goes on.`);
+    if (res) {
+      syncRoster(ctx);
+      ctx.toast(`Logged -1 rating & sent rework${res.req && res.req.id ? ` (${res.req.id})` : ''} to the lead boss.`);
+    }
   });
 }
 
 async function discard(ctx, job, button) {
   const n = crateList(ctx, job).length;
-  const ok = await ctx.confirm({ title: `Discard ${fmt.plural(n, 'crate')}?`, text: `The reviewed work of ${job.id} is dropped with its integration branch. Your own branch does not change. This cannot be undone.`, okLabel: 'Discard', cancelLabel: 'Keep the crates', danger: true });
+  const needsCancel = job.status !== 'cancelled';
+  const ok = await ctx.confirm({
+    title: `Discard ${fmt.plural(n, 'crate')} (0 · neutral rating)?`,
+    text: `${needsCancel ? `Cancels ${job.id} and drops ` : 'Drops '}the reviewed work with its integration branch. Your own branch does not change.\n\nAgent rating: 0 (neutral — use when discarding unwanted work or a mistake without penalizing the specialist).`,
+    okLabel: 'Discard (0 rating)',
+    cancelLabel: 'Keep the crates',
+    danger: true,
+  });
   if (!ok) return;
-  await ui.busy(button, async () => { const res = await ctx.api.post(`/api/jobs/${enc(job.id)}/truck/discard`); if (res) { ctx.toast('The truck is empty. Nothing was shipped.'); load(ctx); } });
+  await ui.busy(button, async () => {
+    if (needsCancel) {
+      const cRes = await ctx.api.post(`/api/jobs/${enc(job.id)}/cancel`);
+      if (!cRes) return;
+    }
+    const res = await ctx.api.post(`/api/jobs/${enc(job.id)}/truck/discard`);
+    if (res) {
+      syncRoster(ctx);
+      ctx.toast('Load discarded (0 · neutral agent rating). Nothing was shipped.');
+      load(ctx);
+    }
+  });
 }
 
 // ------------------------------------------------------------------ render
@@ -415,9 +457,9 @@ function refresh(ctx) {
     else if (t && Number(t.behind) > 0) out.push(h('div.callout', h('div.callout-title', `${branch} moved: ${fmt.plural(Number(t.behind), 'new commit')}`),
       h('p', { style: { margin: 0 } }, 'When you press Ship, the hub first merges these commits into the load and runs the check. It then shows you the new load. That first press ships nothing.')));
     if (job.status === 'cancelled' && crates.length) out.push(h('div.callout.bad', h('div.callout-title', 'This job is cancelled'),
-      h('p', `${fmt.plural(crates.length, 'reviewed crate is', 'reviewed crates are')} still on the truck. Ship ${crates.length === 1 ? 'it' : 'them'}, or discard ${crates.length === 1 ? 'it' : 'them'}.`),
-      h('div.row', ui.btn('Ship loaded crates', { tone: 'go', disabled: !canShip, onClick: (e) => shipAll(ctx, job, e.currentTarget) }), ui.btn('Discard', { tone: 'danger', onClick: (e) => discard(ctx, job, e.currentTarget) }))));
-    else if (job.status === 'delivering' && crates.length) out.push(h('div.callout.you', h('div.callout-title', 'The truck waits for you'), h('p', { style: { margin: 0 } }, 'Every requirement is verified or waived. Read the report, look at the load, then ship. The job ends when the truck is empty.')));
+      h('p', `${fmt.plural(crates.length, 'reviewed crate is', 'reviewed crates are')} still on the truck. Ship ${crates.length === 1 ? 'it' : 'them'} (+1 rating), or discard ${crates.length === 1 ? 'it' : 'them'} (0 · neutral).`),
+      h('div.row', ui.btn('Ship loaded crates (+1)', { tone: 'go', disabled: !canShip, onClick: (e) => shipAll(ctx, job, e.currentTarget) }), ui.btn('Discard (0 · neutral)', { tone: 'danger', onClick: (e) => discard(ctx, job, e.currentTarget) }))));
+    else if (job.status === 'delivering' && crates.length) out.push(h('div.callout.you', h('div.callout-title', 'The truck waits for you'), h('p', { style: { margin: 0 } }, 'Every requirement is verified or waived. Approve & ship (+1 agent rating), deny with changes (-1), or discard unwanted work (0 · neutral).')));
     return out;
   });
 
@@ -432,8 +474,9 @@ function refresh(ctx) {
     const check = t ? t.check : undefined;
     return h('div.tk-ship',
       job.status === 'cancelled' ? null : h('div.row',
-        ui.btn('Approve & ship all', { tone: 'go', cls: 'big', disabled: !canShip, title: `Ship ${fmt.plural(crates.length, 'crate')} to ${branch}`, onClick: (e) => shipAll(ctx, job, e.currentTarget) }),
-        sel.isOpen(job) ? ui.btn('Request changes', { onClick: (e) => requestChanges(ctx, job, null, e.currentTarget) }) : null,
+        ui.btn('Approve & ship all (+1)', { tone: 'go', cls: 'big', disabled: !canShip, title: `Ship ${fmt.plural(crates.length, 'crate')} to ${branch} (+1 agent rating per crate)`, onClick: (e) => shipAll(ctx, job, e.currentTarget) }),
+        sel.isOpen(job) ? ui.btn('Deny / Request changes (-1)', { tone: 'danger', title: 'Deny the load (-1 agent rating with reason) and request rework', onClick: (e) => requestChanges(ctx, job, null, e.currentTarget) }) : null,
+        ui.btn('Discard (0 · neutral)', { title: 'Discard unwanted work or mistakes with 0 rating impact on the specialist', onClick: (e) => discard(ctx, job, e.currentTarget) }),
         ui.btn('Open the cargo in Finder', { title: 'The hub makes a clone of the truck head, so you can run it before you approve', onClick: (e) => ui.busy(e.currentTarget, async () => {
           // Inside the Mac app the hub only makes the copy (open:false) and the app opens Finder. In a browser the hub opens it.
           const viaApp = ctx.native.available;
@@ -505,7 +548,7 @@ export default {
   update(ctx) {
     if (!view) return;
     const c = ctx.changes;
-    if (!(c.has('jobs') || c.has('deliveries') || c.has('tasks') || c.has('agents') || c.has('projects') || c.has('board') || c.has('inbox') || c.has('state'))) return;
+    if (!(c.has('jobs') || c.has('deliveries') || c.has('tasks') || c.has('agents') || c.has('projects') || c.has('board') || c.has('inbox') || c.has('roster') || c.has('state'))) return;
     const job = shownJob(ctx);
     const floor = ctx.job;
     // Choose the truck again when the job that shows is gone, or when another job came on the floor and the owner named no job.

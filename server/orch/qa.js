@@ -384,7 +384,22 @@ export function createQa(ctx) {
     // An empty crate made no commit: its mergeSha is the head it was loaded on (a log entry, or the job's base).
     const emptyShips = (d) => d.empty === true && idx >= 0 && log.findIndex((e) => e.sha === d.mergeSha) <= idx;
     for (const d of ctx.deliveriesOf(jobId, (x) => x.status === 'loaded')) {
-      if (shippedIds.has(d.id) || d.mergeSha === res.sha || emptyShips(d)) ctx.patch('deliveries', d.id, { status: 'shipped', shippedAt: ctx.now() });
+      if (shippedIds.has(d.id) || d.mergeSha === res.sha || emptyShips(d)) {
+        ctx.patch('deliveries', d.id, { status: 'shipped', shippedAt: ctx.now(), ownerRating: 1 });
+        const t = ctx.task(d.taskId);
+        const maker = d.makerId ? ctx.agent(d.makerId) : null;
+        const rosterId = d.rosterId || t?.rosterId || maker?.rosterId || null;
+        if (rosterId) {
+          ctx.roster?.recordRating?.(rosterId, {
+            delta: 1,
+            outcome: 'shipped',
+            jobId,
+            taskId: d.taskId,
+            deliveryId: d.id,
+            note: t?.title ? `Shipped: ${t.title}` : 'Approved & shipped by owner',
+          });
+        }
+      }
     }
     const left = ctx.deliveriesOf(jobId, (x) => x.status === 'loaded').length;
     if (left === 0 && ctx.job(jobId).status === 'cancelled') await ctx.owner.dropIntegration(ctx.job(jobId));

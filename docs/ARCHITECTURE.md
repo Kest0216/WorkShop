@@ -60,13 +60,15 @@ WorkShop/
     providers/index.js     registry + detection
     providers/oss.js       open-weight endpoint + Stand-in adapter (`oss`)
     providers/oss-agent.mjs standalone local OSS tool-loop / Stand-in runner
-    providers/claude.js    Claude Code CLI adapter (API-key only)
-    providers/gemini.js    Antigravity CLI (agy) adapter (API-key only)
+    providers/claude.js    Claude Code CLI adapter (API-key only; consumer OAuth disabled)
+    providers/gemini.js    Antigravity CLI (agy) adapter (API-key only; consumer OAuth disabled)
+    providers/openai.js    OpenAI adapter (official "Sign in with ChatGPT" OAuth 2.0 + PKCE portal flow + OPENAI_API_KEY)
     providers/mock.js      fake provider (demo + tests)
     providers/mock-agent.mjs  scripted fake CLI that calls the real hub tools
-    harnesses.js           Harness Rack registry + `.shop/HARNESS.md` renderer (`config/harnesses.json`)
-    roster.js              Employee Book catalog + outcome tracking (`config/roster.json`)
-    training.js            Phase 1 RFT requisition queue + enrollment (`data/requisitions.json`)
+    rlport.js              Universal RL Compute Port (Local Machine GPU, Remote Cluster, or [SIM] Demo + closed-weight guard)
+    harnesses.js           Harness Rack registry + `.shop/HARNESS.md` renderer (`config/harnesses.json` + `local/harnesses.json`)
+    roster.js              Certified Employee Handbook + owner +1/-1/0 ratings (`config/roster.json` + `local/roster.json`)
+    training.js            Agent Forge + RL pipeline + deterministic Verification & QA Gate (`data/requisitions.json`)
     runner.js              spawns agent turns, parses streams, limits, timeouts
     router.js              picks a model per task from config/models.json
     benchlm.js             benchmark refresh for the registry
@@ -79,8 +81,10 @@ WorkShop/
   ui/
     index.html, app.js, style.css
     lib/*.js               api client, client store, selectors, view model, widgets
-    panels/*.js            work order, blueprint, board, truck, crew (Roster & Teams), toolkit (Harnesses & Toolkit), inbox, models, keys (Runtimes & Keys), settings
+    panels/index.js        Consolidated 6-button taskbar: workorder, board (Inbox + Board), blueprint, truck, crew (Team + Forge + Rack + Models + Tools), settings (Runtimes + Keys + RL Port + Limits)
     scene/*                pixel-art scene engine (view model in section 13)
+  ports/rl/                Universal RL Port v1 contract (`PORT_CONTRACT.md`) + starter local & remote cluster templates
+  local/                   Git-ignored personal machine overlay (`rl-port.mjs`, `rl-port.json`, `roster.json`, `harnesses.json`; `README.md` tracked)
   config/
     models.json            model registry + benchmark scores
     harnesses.json         curated Harness Rack specifications

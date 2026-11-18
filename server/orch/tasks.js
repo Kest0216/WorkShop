@@ -70,9 +70,10 @@ export function createTasks(ctx) {
     let agent = ctx.agent(task?.assigneeId);
     if (!task || !job || !project || !agent || task.status !== 'ready' || !LIVE.has(job.status)) return;
 
+    const standInMode = Boolean(ctx.settings()?.oss?.standIn === true);
     let match = null;
     if (!ctx.isMock(job) && agent.provider === 'oss' && ctx.roster) {
-      match = ctx.roster.match({ domain: task.domain, role: 'maker' });
+      match = ctx.roster.match({ domain: task.domain, role: 'maker', certifiedOnly: !standInMode, allowSim: standInMode });
       if (typeof ctx.decider?.selectSpecialist === 'function') {
         const dec = await ctx.decider.selectSpecialist({ task, roster: ctx.roster, harnesses: ctx.harnesses });
         task = ctx.task(taskId);
@@ -119,9 +120,16 @@ export function createTasks(ctx) {
         harnessId: harness?.id,
         fallbackModel: agent.model,
       });
+      if (!standInMode) {
+        const msg = `Specialty gap (${task.domain}): no RL-certified specialist in Employee Handbook. Queued ${req.id} — forge & RL-certify in Team -> Agent Forge, then Retry.`;
+        ctx.evt(job.id, { scope: '#plan', body: msg });
+        ctx.notice('owner', `${task.id}: ${msg}`, job.id, null, 'crew');
+        K.stop(ctx.task(taskId), 'blocked', 'owner', msg);
+        return;
+      }
       ctx.evt(job.id, {
         scope: '#plan',
-        body: `Phase 1 RFT requisition ${req.id} queued for ${task.domain} (running fallback ${agent.name} on ${agent.model} with harness ${harness?.id || 'default'}).`,
+        body: `Phase 1 RFT requisition ${req.id} queued for ${task.domain} ([SIM] Stand-in running ${agent.name} on ${agent.model} with harness ${harness?.id || 'default'}).`,
       });
     }
 

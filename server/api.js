@@ -24,8 +24,9 @@ const DELIVERY_RE = /^D[1-9][0-9]{0,8}$/;
 const KEY_RE = /^[a-z0-9][a-z0-9_-]{0,39}$/i;
 const SHA_RE = /^[0-9a-f]{4,64}$/i;
 const JOB_KINDS = ['build', 'fix', 'research'];
-const AUTH_LABS = ['claude', 'gemini'];
-const MODES = ['apikey'];
+const AUTH_LABS = ['claude', 'gemini', 'openai'];
+const APIKEY_ONLY_LABS = ['claude', 'gemini'];
+const OPENAI_MODES = ['apikey', 'subscription'];
 const RETRY_MODELS = ['same', 'up', 'other_lab'];
 const HUB_WRITTEN_SETTINGS = ['selfTest', 'authAck', 'providers'];
 const SLUG_RE = /^[a-z0-9][a-z0-9_-]{1,39}$/;
@@ -89,7 +90,7 @@ function crewOf(crew, presets) {
 export function mountApi(http, deps) {
   const {
     store, board, orch, providers, secrets, settings, router, benchlm, git, toolkit, decider, runner, mcp,
-    harnesses = null, roster = null, training = null,
+    harnesses = null, roster = null, training = null, rlPort = null,
     pickFolder = null, reveal = null, log = noop, now = Date.now, version = '0.1.0', startedAt = Date.now(),
   } = deps;
   const say = typeof log === 'function' ? log : noop;
@@ -156,6 +157,7 @@ export function mountApi(http, deps) {
     harnesses: harnesses ? harnesses.list() : [],
     roster: roster ? roster.list() : [],
     requisitions: training ? training.list() : [],
+    rlPort: rlPort ? rlPort.status() : null,
   }));
 
   // The heartbeat carries the seq that GET /api/health reports, so a page sees how far the hub is (S1).
@@ -451,8 +453,13 @@ export function mountApi(http, deps) {
   });
   route('PUT', '/api/providers/:id/mode', async ({ params, body }) => {
     needProvider(params.id);
-    if (!AUTH_LABS.includes(params.id)) throw httpError(400, 'Only Frontier labs (claude, gemini) take an API-key mode.');
-    if (!MODES.includes(body.mode)) throw httpError(400, 'Consumer subscription mode is disabled; Frontier labs use apikey only.');
+    if (!AUTH_LABS.includes(params.id)) throw httpError(400, 'Only Frontier labs (claude, gemini, openai) take a sign-in mode.');
+    if (APIKEY_ONLY_LABS.includes(params.id) && body.mode !== 'apikey') {
+      throw httpError(400, 'Anthropic and Google forbid third-party subscription OAuth; Frontier labs claude and gemini use apikey only.');
+    }
+    if (params.id === 'openai' && !OPENAI_MODES.includes(body.mode)) {
+      throw httpError(400, 'OpenAI mode must be "subscription" (Sign in with ChatGPT) or "apikey".');
+    }
     settings.update({ auth: { [params.id]: body.mode }, authAck: { [params.id]: { mode: body.mode, ts: now() } } });
     await refreshProviders();
     return providers.status(params.id);
@@ -640,7 +647,7 @@ export function mountApi(http, deps) {
     const book = needRoster();
     const item = isObj(body?.entry) ? body.entry : body;
     if (!isObj(item)) throw httpError(400, 'Send a roster entry object.');
-    return book.upsert(item);
+    return book.upsert(item, { requireExistingOrCertified: true });
   });
   route('DELETE', '/api/roster/:id', ({ params }) => {
     if (!SLUG_RE.test(params.id)) throw httpError(400, 'Invalid roster id.');
@@ -649,6 +656,22 @@ export function mountApi(http, deps) {
 
   route('GET', '/api/requisitions', () => (training ? training.list() : []));
   route('POST', '/api/requisitions', ({ body }) => needTraining().createRequisition(isObj(body) ? body : {}));
+  route('POST', '/api/training/forge', async ({ body }) => {
+    const tr = needTraining();
+    return tr.forge(isObj(body) ? body : {});
+  });
+  route('POST', '/api/requisitions/:id/start', async ({ params }) => {
+    if (!TR_RE.test(params.id)) throw httpError(400, 'Invalid requisition id.');
+    return needTraining().startRun(params.id);
+  });
+  route('POST', '/api/requisitions/:id/poll', async ({ params }) => {
+    if (!TR_RE.test(params.id)) throw httpError(400, 'Invalid requisition id.');
+    return needTraining().pollRun(params.id);
+  });
+  route('POST', '/api/requisitions/:id/cancel', async ({ params }) => {
+    if (!TR_RE.test(params.id)) throw httpError(400, 'Invalid requisition id.');
+    return needTraining().cancelRun(params.id);
+  });
   route('POST', '/api/requisitions/:id/enroll', ({ params, body }) => {
     if (!TR_RE.test(params.id)) throw httpError(400, 'Invalid requisition id.');
     return needTraining().enroll(params.id, isObj(body) ? body : {});
@@ -656,6 +679,24 @@ export function mountApi(http, deps) {
   route('POST', '/api/requisitions/:id/dismiss', ({ params }) => {
     if (!TR_RE.test(params.id)) throw httpError(400, 'Invalid requisition id.');
     return needTraining().dismiss(params.id);
+  });
+
+  // ---- Universal RL Compute Port ----
+  route('GET', '/api/rl-port', () => (rlPort ? rlPort.status() : { ok: false, mode: 'local', detail: 'RL Compute Port not initialized.' }));
+  route('PUT', '/api/rl-port', async ({ body }) => {
+    if (!isObj(body)) throw httpError(400, 'Send { mode?, localUrl?, remoteUrl?, providerHint? }.');
+    const patch = {};
+    if (body.mode !== undefined) patch.mode = body.mode;
+    if (body.localUrl !== undefined) patch.localUrl = body.localUrl;
+    if (body.remoteUrl !== undefined) patch.remoteUrl = body.remoteUrl;
+    if (body.providerHint !== undefined) patch.providerHint = body.providerHint;
+    if (Object.keys(patch).length > 0) settings.update({ rlPort: patch });
+    if (rlPort) return rlPort.probe();
+    return { ok: true, rlPort: settings.get().rlPort };
+  });
+  route('POST', '/api/rl-port/probe', async () => {
+    if (!rlPort) throw httpError(503, 'RL Compute Port is not initialized.');
+    return rlPort.probe();
   });
 
   // ---- agents (MCP) ----

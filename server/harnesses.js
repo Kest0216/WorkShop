@@ -235,16 +235,18 @@ function loadShippedDefaults() {
 }
 
 /**
- * Create the Harness Rack registry backed by `<configDir>/harnesses.json`.
- * @param {{ configDir: string, log?: Function, now?: () => number }} deps
+ * Create the Harness Rack registry backed by `<configDir>/harnesses.json`,
+ * with optional git-ignored personal overlay at `<localDir>/harnesses.json`.
+ * @param {{ configDir: string, localDir?: string|null, log?: Function, now?: () => number }} deps
  */
-export function createHarnesses({ configDir, log, now = () => Date.now() } = {}) {
+export function createHarnesses({ configDir, localDir = null, log, now = () => Date.now() } = {}) {
   if (!configDir) throw new Error('createHarnesses needs configDir');
   const say = safeLog(log);
   const file = path.join(configDir, 'harnesses.json');
+  const localFile = localDir ? path.join(localDir, 'harnesses.json') : null;
   const listeners = new Set();
 
-  function loadInitial() {
+  function loadBase() {
     if (fs.existsSync(file)) {
       try {
         const raw = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
@@ -257,7 +259,33 @@ export function createHarnesses({ configDir, log, now = () => Date.now() } = {})
     return loadShippedDefaults();
   }
 
-  let registry = loadInitial();
+  function loadLocalOverlay() {
+    if (!localFile || !fs.existsSync(localFile)) return [];
+    try {
+      const raw = JSON.parse(fs.readFileSync(localFile, 'utf8').replace(/^\uFEFF/, ''));
+      const listRaw = Array.isArray(raw?.harnesses) ? raw.harnesses : Array.isArray(raw) ? raw : [];
+      return listRaw.map((h, idx) => normalizeHarness(h, idx));
+    } catch (err) {
+      say('warn', 'harnesses: invalid local/harnesses.json ignored', { error: err?.message });
+      return [];
+    }
+  }
+
+  let baseRegistry = loadBase();
+  let localItems = loadLocalOverlay();
+
+  function mergedRegistry() {
+    if (!localItems.length) return baseRegistry;
+    const byId = new Map(baseRegistry.harnesses.map((h) => [h.id, h]));
+    for (const item of localItems) byId.set(item.id, item);
+    return {
+      version: 1,
+      updatedAt: baseRegistry.updatedAt,
+      harnesses: [...byId.values()],
+    };
+  }
+
+  let registry = mergedRegistry();
 
   function emit() {
     const snapshot = list();
@@ -290,28 +318,58 @@ export function createHarnesses({ configDir, log, now = () => Date.now() } = {})
     return exact ? copyJson(exact) : null;
   }
 
+  function persistLocal() {
+    if (!localFile) return;
+    const doc = {
+      version: 1,
+      updatedAt: new Date(now()).toISOString().slice(0, 10),
+      harnesses: localItems,
+    };
+    writeAtomic(localFile, `${JSON.stringify(doc, null, 2)}\n`);
+    registry = mergedRegistry();
+    emit();
+  }
+
   function persist(nextReg) {
     const clean = validateHarnessRegistry({
       ...nextReg,
       updatedAt: new Date(now()).toISOString().slice(0, 10),
     });
     writeAtomic(file, `${JSON.stringify(clean, null, 2)}\n`);
-    registry = clean;
+    baseRegistry = clean;
+    registry = mergedRegistry();
     emit();
     return list();
   }
 
   function save(input) {
+    if (localFile && input?.publicRepo !== true) {
+      const clean = validateHarnessRegistry({
+        ...input,
+        updatedAt: new Date(now()).toISOString().slice(0, 10),
+      });
+      localItems = clean.harnesses;
+      persistLocal();
+      return list();
+    }
     return persist(input);
   }
 
   function upsert(input) {
+    const publicRepo = input?.publicRepo === true;
     const item = normalizeHarness(copyJson(input), 0);
-    const idx = registry.harnesses.findIndex((h) => h.id === item.id);
-    const harnesses = [...registry.harnesses];
+    if (localFile && !publicRepo) {
+      const idx = localItems.findIndex((h) => h.id === item.id);
+      if (idx >= 0) localItems[idx] = item;
+      else localItems.push(item);
+      persistLocal();
+      return get(item.id);
+    }
+    const idx = baseRegistry.harnesses.findIndex((h) => h.id === item.id);
+    const harnesses = [...baseRegistry.harnesses];
     if (idx >= 0) harnesses[idx] = item;
     else harnesses.push(item);
-    persist({ ...registry, harnesses });
+    persist({ ...baseRegistry, harnesses });
     return get(item.id);
   }
 
@@ -319,8 +377,13 @@ export function createHarnesses({ configDir, log, now = () => Date.now() } = {})
     const idx = registry.harnesses.findIndex((h) => h.id === id);
     if (idx < 0) throw fail(`Unknown harness: ${id}`, 404);
     if (registry.harnesses.length <= 1) throw fail('At least one harness must remain on the rack.');
-    const harnesses = registry.harnesses.filter((h) => h.id !== id);
-    persist({ ...registry, harnesses });
+    if (localFile && localItems.some((h) => h.id === id)) {
+      localItems = localItems.filter((h) => h.id !== id);
+      persistLocal();
+      return { ok: true, id };
+    }
+    const harnesses = baseRegistry.harnesses.filter((h) => h.id !== id);
+    persist({ ...baseRegistry, harnesses });
     return { ok: true, id };
   }
 

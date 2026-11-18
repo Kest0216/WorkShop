@@ -173,9 +173,9 @@ function onSceneEvent(evt) {
   }
   else if (kind === 'board') openPanel('board');
   else if (kind === 'counter') openPanel('workorder');
-  else if (kind === 'toolwall') openPanel('toolkit', { tab: 'tools' }); // the tool pegboard
-  else if (kind === 'harnesses') openPanel('toolkit', { tab: 'rack' }); // the Harness Rack
-  else if (kind === 'rftbay') openPanel('crew', { tab: 'rft' }); // the RFT calibration bay
+  else if (kind === 'toolwall') openPanel('crew', { tab: 'forge', tray: 'tools' }); // the tool pegboard
+  else if (kind === 'harnesses') openPanel('crew', { tab: 'forge', tray: 'rack' }); // the Harness Rack
+  else if (kind === 'rftbay') openPanel('crew', { tab: 'forge' }); // the Agent Forge & RL bay
 }
 
 const truck = createTruck({ onChange: () => store.touch('ui') });
@@ -294,8 +294,25 @@ function teardown() {
   open = null;
 }
 
+/** Map legacy or merged panel ids ('inbox', 'keys', 'toolkit', 'models') onto the 6 consolidated panels. */
+function resolvePanelAlias(rawId, rawParams = {}) {
+  const id = rawId == null ? '' : String(rawId);
+  const p = rawParams && typeof rawParams === 'object' ? { ...rawParams } : {};
+  if (id === 'inbox') return { id: 'board', params: { view: 'actions', ...p } };
+  if (id === 'keys') return { id: 'settings', params: { tab: 'runtimes', ...p } };
+  if (id === 'toolkit') {
+    const tray = p.tab === 'tools' ? 'tools' : 'rack';
+    delete p.tab;
+    return { id: 'crew', params: { tab: 'forge', tray, ...p } };
+  }
+  if (id === 'models') return { id: 'crew', params: { tab: 'forge', tray: 'models', benchmarks: '1', ...p } };
+  if (id === 'crew' && p.tab === 'rft') return { id: 'crew', params: { ...p, tab: 'forge' } };
+  return { id, params: p };
+}
+
 /** Open a panel in the drawer. params become ctx.params and URL parameters (deep link). Returns false for an unknown id. */
-function openPanel(id, params = {}, { focus = true } = {}) {
+function openPanel(rawId, rawParams = {}, { focus = true } = {}) {
+  const { id, params } = resolvePanelAlias(rawId, rawParams);
   const def = panelById.get(id);
   if (!def) return false;
   const next = cleanParams(params);
@@ -311,7 +328,7 @@ function openPanel(id, params = {}, { focus = true } = {}) {
   el.drawer.classList.toggle('wide', !!def.wide);
   el.app.classList.add('drawer-open');
   el.app.classList.toggle('drawer-wide', !!def.wide);       // style.css: the notes and the lock card keep to the floor that the drawer leaves free
-  el.app.classList.toggle('inbox-open', def.id === 'inbox'); // the notes about what waits hide while the Inbox itself is open
+  el.app.classList.toggle('inbox-open', def.id === 'board'); // sticky notes about waiting items hide while the combined Board & Inbox is open
   el.app.dataset.panel = def.id; // style.css: a sticky note about the open panel hides
   el.drawerTitle.textContent = def.title;
   el.drawerBody.className = 'drawer-body paper' + (def.layout === 'fill' ? ' fill' : '');
@@ -352,20 +369,20 @@ function syncUrl() {
 }
 
 function readDeepLink() {
-  const params = {};
-  for (const [k, v] of query) if (!RESERVED.has(k)) params[k] = v;
-  let id = query.get('panel');
-  if (!id && params.agent) id = 'crew';
-  if (!id && params.file) id = 'truck';
+  const rawParams = {};
+  for (const [k, v] of query) if (!RESERVED.has(k)) rawParams[k] = v;
+  let rawId = query.get('panel');
+  if (!rawId && rawParams.agent) rawId = 'crew';
+  if (!rawId && rawParams.file) rawId = 'truck';
+  const { id, params } = resolvePanelAlias(rawId, rawParams);
   urlKeys = new Set(Object.keys(params));
   return id && panelById.has(id) ? { id, params } : null;
 }
 
 // ------------------------------------------------------------------ top bar: panel buttons
 
-// When the bar is short of room, panels that are rarely needed in the middle of a job fold into one "More" button:
-// first the three configuration panels, then the tool wall (see fitTopbar and the #topbar.sq-N rules in style.css).
-const FOLDS = [{ ids: new Set(['models', 'keys', 'settings']), from: 4 }, { ids: new Set(['toolkit']), from: 6 }];
+// When the bar is short of room, panels that are rarely needed in the middle of a job fold into one "More" button.
+const FOLDS = [{ ids: new Set(['settings']), from: 4 }, { ids: new Set(['crew']), from: 6 }];
 const foldOf = (id) => FOLDS.find((f) => f.ids.has(id)) || null;
 const navBtns = new Map(); // panel id -> [{ button, badge }]: the button in the bar, and for a panel that can fold its twin in the More menu
 const more = { button: null, badge: null, menu: null, open: false };
@@ -419,7 +436,7 @@ document.addEventListener('pointerdown', (e) => { if (more.open && !more.menu.co
 
 function updateNav() {
   const lite = { store, sel, job: sel.activeJob(store) };
-  const sticky = new Set(toasts.list().filter((t) => t.sticky && t.panel).map((t) => t.panel));
+  const sticky = new Set(toasts.list().filter((t) => t.sticky && t.panel).map((t) => resolvePanelAlias(t.panel).id));
   let foldedCount = 0, foldedHot = false, foldedOpen = false;
   for (const def of PANELS) {
     let n = 0, hot = false;
@@ -628,7 +645,7 @@ const renderLabChips = (() => {
     sig = next;
     barDirty = true;
     el.labchips.hidden = !list.length;
-    mount(el.labchips, list.map((m) => h('button', { class: ['lab-chip', 'lt-' + m.tone], type: 'button', title: m.title, 'aria-label': m.title, onclick: () => openPanel('keys', { lab: m.id }) },
+    mount(el.labchips, list.map((m) => h('button', { class: ['lab-chip', 'lt-' + m.tone], type: 'button', title: m.title, 'aria-label': m.title, onclick: () => openPanel('settings', { tab: 'runtimes', lab: m.id }) },
       h('span.lc-sw', { style: /^[a-z0-9]{1,20}$/.test(m.id) ? { '--sw': `var(--lab-${m.id})` } : null }), h('span.lc-name', m.name), h('span.lc-val', m.value), m.reset ? h('span.lc-reset', m.reset) : null)));
   };
 })();
@@ -696,15 +713,15 @@ function renderStrip() {
   el.strip.hidden = !show;
   if (!show) { clear(el.strip); return; }
   const statusLine = !hasOss && !hasBoss
-    ? 'Enable $0 Stand-in to test workflows locally, or add one Gemini / Claude API key for real jobs.'
+    ? 'Enable $0 Stand-in to test workflows locally, or sign in with ChatGPT / add one Gemini or Claude API key for real jobs.'
     : !hasOss
       ? 'Frontier Officer ready. Start a local OSS model or enable $0 Stand-in for your specialist crew.'
-      : '$0 OSS specialist runtime ready. Add one Gemini or Claude API key for real orchestration & review.';
+      : '$0 OSS specialist runtime ready. Sign in with ChatGPT or add a Gemini / Claude API key for real orchestration & review.';
   mount(el.strip,
     h('div.strip-head',
       h('span.strip-tag', 'Quick setup'),
       h('span.strip-note', statusLine),
-      ui.btn('Hide', { small: true, title: 'Hide this guide. You can open Runtimes anytime from the top bar.', onClick: () => { prefs.set('stripHidden', need.join(','), 300); renderStrip(); } })),
+      ui.btn('Hide', { small: true, title: 'Hide this guide. You can open Settings anytime from the top bar.', onClick: () => { prefs.set('stripHidden', need.join(','), 300); renderStrip(); } })),
     h('div.strip-quick-acts',
       !hasOss ? ui.btn('Enable $0 Stand-in', { small: true, tone: 'go', onClick: (e) => ui.busy(e.currentTarget, async () => {
         const res = await api.put('/api/providers/oss', { ...((store.settings && store.settings.oss) || {}), standIn: true });
@@ -714,7 +731,7 @@ function renderStrip() {
         await labs.reload();
         toasts.show({ level: 'info', text: 'Phase 0 Stand-in simulation enabled ($0).' });
       }) }) : null,
-      ui.btn('Open Runtimes & Keys', { small: true, tone: 'primary', onClick: () => openPanel('keys') })));
+      ui.btn('Open Settings & Runtimes', { small: true, tone: 'primary', onClick: () => openPanel('settings', { tab: 'runtimes' }) })));
 }
 
 let hintBuilt = false;
@@ -765,9 +782,13 @@ function playFx(name, payload, key = name) {
   sceneCtl.fx(name, payload);
 }
 
-// A hub notice of level owner names its panel (evt.panel: blueprint | truck | inbox | keys). panel: null says that no panel
-// helps (a job that ended). Only an older hub sends no field at all: then lib/notices.js guesses the button from the words.
-const openAction = (panel, label, params = {}) => ({ label: label || `Open ${panelById.get(panel).label || panelById.get(panel).title}`.replace('+ ', ''), run: () => openPanel(panel, params) });
+// A hub notice of level owner names its panel (evt.panel: blueprint | truck | inbox | keys | board | crew | settings).
+const openAction = (panel, label, params = {}) => {
+  const res = resolvePanelAlias(panel, params);
+  const def = panelById.get(res.id);
+  const name = def ? String(def.label || def.title).replace('+ ', '') : res.id;
+  return { label: label || `Open ${name}`, run: () => openPanel(res.id, res.params) };
+};
 
 store.on('notice', (evt) => {
   const level = ['info', 'warn', 'error', 'owner'].includes(evt.level) ? evt.level : 'info';
@@ -775,9 +796,11 @@ store.on('notice', (evt) => {
   if (!text) return;
   ticker.notice(level, text);
   const named = Object.hasOwn(evt, 'panel'); // the hub chose (a panel, or none)
-  const panel = typeof evt.panel === 'string' && panelById.has(evt.panel) ? evt.panel : level === 'owner' && !(named && !evt.panel) ? guessPanel(text) : null;
+  const resolvedEvtPanel = typeof evt.panel === 'string' ? resolvePanelAlias(evt.panel).id : null;
+  const rawPanel = resolvedEvtPanel && panelById.has(resolvedEvtPanel) ? evt.panel : level === 'owner' && !(named && !evt.panel) ? guessPanel(text) : null;
+  const panel = rawPanel ? resolvePanelAlias(rawPanel).id : null;
   // A notice about a truck opens the truck of its job (every job has its own).
-  const id = toasts.show({ level, text, panel, action: panel ? openAction(panel, panel === 'inbox' && isAsk(text) ? 'Answer' : null, panel === 'truck' && evt.jobId && store.get('jobs', evt.jobId) ? { job: evt.jobId } : {}) : null });
+  const id = toasts.show({ level, text, panel, action: rawPanel ? openAction(rawPanel, (rawPanel === 'inbox' || rawPanel === 'board') && isAsk(text) ? 'Answer' : null, panel === 'truck' && evt.jobId && store.get('jobs', evt.jobId) ? { job: evt.jobId } : {}) : null });
   if (level === 'owner') {
     // A sticky hub notice lives as long as the thing it is about waits (syncAttention). One that stands for nothing in the
     // inbox (a plan summary when the plan needs no approval) leaves after NOTICE_GRACE_MS: it stays in the ticker.
@@ -811,18 +834,18 @@ function noteFor(it) {
   const job = it.job;
   const n = job ? sel.loadedDeliveries(store, job.id).length : 0;
   switch (it.kind) {
-    case 'question': { const who = sel.who(store, it.q.from, it.q.fromId) || 'A boss'; return { head: oneLine(it.q.text).slice(0, 40), text: `${who} asks: ${oneLine(it.q.text)}`, panel: 'inbox', action: openAction('inbox', 'Answer') }; }
+    case 'question': { const who = sel.who(store, it.q.from, it.q.fromId) || 'A boss'; return { head: oneLine(it.q.text).slice(0, 40), text: `${who} asks: ${oneLine(it.q.text)}`, panel: 'board', action: openAction('inbox', 'Answer') }; }
     case 'plan': return { text: 'The plan is ready. Read the Blueprint and approve it to start the crew.', panel: 'blueprint', action: openAction('blueprint') };
     case 'budget': case 'paused': return job ? { text: `The hub paused ${job.id}: ${sel.pauseWords(job)}. ${job.error ? sentence(String(job.error).slice(0, 200)) + ' ' : ''}Resume or cancel it.`, panel: 'blueprint', action: openAction('blueprint') } : null;
     // Every job has its own truck: the button names the job, so the crates of a cancelled job open also while a newer job runs.
     case 'truck': return job ? { text: job.status === 'cancelled' ? `${job.id} is cancelled, but ${fmt.plural(n, 'reviewed crate is', 'reviewed crates are')} still on the truck. Ship or discard.`
       : `The truck is ready: ${fmt.plural(n, 'crate waits', 'crates wait')} for your approval.`, panel: 'truck', action: openAction('truck', null, { job: job.id }) } : null;
-    case 'review': return { text: `A hand-in waits for your verdict${it.delivery ? `: ${it.delivery.taskId}` : ''}. Say PASS or FIX.`, panel: 'inbox', action: openAction('inbox') };
-    case 'requirement': return { text: `${it.req ? it.req.id : 'A requirement'} ${it.req && it.req.status === 'failed' ? 'failed and no task serves it' : 'has no task'}. Waive it, add a task, or stop the job.`, panel: 'inbox', action: openAction('inbox') };
-    case 'agentfiles': return { text: `${it.project ? it.project.name : 'The project'} holds agent-config files. Accept or refuse them.`, panel: 'inbox', action: openAction('inbox') };
-    case 'requisition': return { text: oneLine(it.text || 'Phase 1 RFT training requisition queued.'), panel: 'crew', action: openAction('crew', 'Open Roster', { tab: 'rft' }) };
-    case 'signin': return it.lab ? { text: `Work waits for ${it.lab.label || it.lab.id}: ${sentence(it.lab.reason || it.text)}`, panel: 'keys', action: openAction('keys') } : null;
-    default: return it.text ? { text: oneLine(it.text), panel: 'inbox', action: openAction('inbox') } : null;
+    case 'review': return { text: `A hand-in waits for your verdict${it.delivery ? `: ${it.delivery.taskId}` : ''}. Say PASS or FIX.`, panel: 'board', action: openAction('inbox') };
+    case 'requirement': return { text: `${it.req ? it.req.id : 'A requirement'} ${it.req && it.req.status === 'failed' ? 'failed and no task serves it' : 'has no task'}. Waive it, add a task, or stop the job.`, panel: 'board', action: openAction('inbox') };
+    case 'agentfiles': return { text: `${it.project ? it.project.name : 'The project'} holds agent-config files. Accept or refuse them.`, panel: 'board', action: openAction('inbox') };
+    case 'requisition': return { text: oneLine(it.text || 'RL Agent Forge requisition queued.'), panel: 'crew', action: openAction('crew', 'Open Team', { tab: 'forge' }) };
+    case 'signin': return it.lab ? { text: `Work waits for ${it.lab.label || it.lab.id}: ${sentence(it.lab.reason || it.text)}`, panel: 'settings', action: openAction('keys') } : null;
+    default: return it.text ? { text: oneLine(it.text), panel: 'board', action: openAction('inbox') } : null;
   }
 }
 
@@ -876,7 +899,7 @@ function syncAttention() {
   if (many) {
     if (specs.every(([key]) => closedNotes.has(key))) return; // the owner closed the note and nothing new waits since
     const words = [...kinds.entries()].map(([kind, n]) => { const w = KIND_WORDS[kind] || ['an item', 'items']; return n === 1 ? w[0] : `${n} ${w[1]}`; });
-    toasts.show({ level: 'owner', key: 'att:many', panel: 'inbox', action: openAction('inbox'), text: `${specs.length} things wait for you: ${words.join(', ')}.`,
+    toasts.show({ level: 'owner', key: 'att:many', panel: 'board', action: openAction('inbox'), text: `${specs.length} things wait for you: ${words.join(', ')}.`,
       onDismiss: () => { for (const [key] of specs) closedNotes.add(key); } });
     return;
   }

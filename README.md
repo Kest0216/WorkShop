@@ -4,10 +4,10 @@
 
 ![WorkShop 16-bit shop floor](docs/progress/macapp-04-running-floor.jpg)
 
-Running big coding projects purely on closed-source APIs burns through tokens fast — and piping automated agent loops through personal consumer subscriptions violates terms of service. WorkShop splits the job in two cleanly:
+Running big coding projects purely on closed-source APIs burns through tokens fast — and Anthropic and Google strictly prohibit third-party OAuth / consumer subscription mirroring. WorkShop splits the job in two cleanly:
 
-- **Orchestration Officers & Inspectors (Gemini / Claude, API key only):** Read your request, break it into safe parallel tasks, review the finished diffs, and run final QA. Because they only plan and inspect, your API spend stays small and predictable.
-- **Specialist Agent Teams (Local OSS, $0):** Open-source models (via Ollama, vLLM, SGLang, llama.cpp, or the built-in Stand-in simulator) grab a modular toolkit from the **Harness Rack** and do the iterative coding on isolated git clones — costing **$0 per million tokens**.
+- **Orchestration Officers & Inspectors (OpenAI "Sign in with ChatGPT" or API Key · Gemini & Claude API Keys only):** Read your request, break it into safe parallel tasks, review the finished diffs, and run final QA. OpenAI leverages its official **Sign in with ChatGPT (OAuth 2.0 + PKCE)** portal flow (or `OPENAI_API_KEY`), while Anthropic and Google run strictly via API keys. Closed-source models act as Officers & Review Gates only — they are **never** sent to GPU RL pipelines.
+- **RL-Certified Open-Weight Specialist Teams (`$0` OSS):** Open-weight models (via Ollama, vLLM, SGLang, llama.cpp, or `[SIM]` Stand-in) are forged in the **Drag-and-Drop Agent Forge** (**Open-Weight Brain + Harness Rig + Intrinsic Tool Belt**), post-trained via the **Universal RL Compute Port** (Local Machine GPU or Remote Cluster on Droplet / Hostinger / RunPod), and verified at the **QA Gate** before entering your **Employee Handbook**.
 
 ---
 
@@ -30,14 +30,17 @@ Here is what happens behind the scenes whenever you submit a **+ Work Order**:
 
 1. **You drop off an order:** Describe what you want built in plain English, pick a new project or point at an existing git repo, and choose a team size.
 2. **Frontier Officer plans it out:** A Gemini or Claude officer reads your codebase and turns your goal into a checklist of requirements, tasks, and strict **file zones** (so parallel builders never edit the same files at once). *If you checked "Pause for plan review", it waits here for your thumbs-up before anyone writes code.*
-3. **Branch 1 — Employee Book check (`Roster`):** When assigning a task, the router checks your **Employee Book** for a trained specialist character matching that kind of work:
-   - **Trained match found:** That character steps up to the bench and equips their **Harness Rig** (`.shop/HARNESS.md`) from the **Harness Rack**.
-   - **No trained specialist yet:** Work doesn't stall — the job runs today using a capable `$0` base OSS model + harness, **and branches off a training requisition** into the **Phase 1 RFT Queue** so that specialty can be fine-tuned later.
-4. **Parallel `$0` OSS benches:** Each task runs in its own isolated git clone inside an OS sandbox. Agents can only touch files in their assigned bench and can ask **Team Leads** or **you** questions (2–4 quick multiple-choice options) on the **Board**.
+3. **Branch 1 — Certified Employee Handbook (`Team -> Employee Handbook`):** When assigning a task, the router checks your **Employee Handbook** for an RL-certified specialist matching that domain:
+   - **Certified match found:** That character steps up to the bench with their intrinsically trained **Harness Rig** (`.shop/HARNESS.md`) and **Tool Belt**.
+   - **No untrained slop:** Untrained models cannot be thrown onto a harness and added to the Handbook directly. If a specialty is missing in a real run, WorkShop queues an **Agent Forge** RL requisition and holds the task until the specialist passes RL + Verification QA (`[SIM]` Demo mode supports zero-GPU testing).
+4. **Parallel `$0` OSS benches:** Each task runs in its own isolated git clone inside an OS sandbox. Agents can only touch files in their assigned bench and can ask **Team Leads** or **you** questions (2–4 quick multiple-choice options) in the unified **Board & Action Deck**.
 5. **Branch 2 — Automated checks & Review Gate:** When a specialist finishes, the hub runs your project's test command, checks that only allowed files changed, and hands the diff to a Frontier Reviewer:
    - **`FIX` branch:** If tests fail or something looks wrong, it bounces right back to the specialist's bench with numbered fix notes.
    - **`PASS` branch:** The hub merges that task one at a time, re-runs checks to verify the combined repo still passes, and loads a **crate** onto the **Merge Truck**.
-6. **Final QA & Your Call:** Once all requirements pass, open **Truck**, inspect any diff line-by-line, and click **Approve & Ship** to fast-forward your real branch (`main`) cleanly. Nothing touches your branch until you approve that exact commit.
+6. **Final QA, Your Call & Owner Agent Ratings (`+1 / -1 / 0`):** Open **Truck**, inspect any diff line-by-line, and make the call:
+   - **Approve & Ship (`+1`):** Fast-forwards your branch cleanly and awards **`+1`** to each crate's specialist.
+   - **Deny / Request Changes (`-1`):** Logs **`-1`** on the specialist with your exact reason so you can audit why an agent performs well or poorly over time, even if it gamed static benchmarks.
+   - **Discard (`0` · neutral):** Drops unwanted or accidental work with **zero** rating penalty.
 
 ---
 
@@ -82,20 +85,16 @@ Today's release is **Phase 0** — the complete local shop floor, Harness Rack, 
 
 ---
 
-## Quick Tour of the App
+## Quick Tour of the Consolidated 6-Item Taskbar
 
-| Button / Floor Prop | What you do there |
+| Topbar Button / Floor Prop | What you do there |
 |---|---|
-| **+ Work Order** *(front counter)* | Start a job, adjust team size, set a Frontier dollar cap, or run the demo |
-| **Inbox** | Everything waiting on you in one place: owner questions, plan approvals, paused jobs, or a ready truck |
-| **Blueprint** | Live progress: checklist of requirements, tasks grouped by status, baseline check results, pause/resume |
-| **Board** | Filtered feed of agent questions, hand-ins, and review notes; reply directly to any agent |
-| **Truck** | Diff-by-diff inspection of verified work, final report, and 1-click **Approve & Ship** |
-| **Roster** *(RFT bay)* | Live **Active Team**, persistent **Employee Book** (`config/roster.json`), and **RFT Queue** |
-| **Harnesses** *(wall rack / pegboard)* | Inspect & edit modular `.shop/HARNESS.md` rigs on the **Harness Rack**, or run one-click **Project Tools** |
-| **Models** | Browse benchmark scores, toggle active models, and view domain leaders |
-| **Runtimes** | Switch between OSS Stand-in and Ollama/vLLM, connect Frontier API keys, and run sandbox self-tests |
-| **Settings** | Presence timeout (**Here / Away** toggle in top bar), crew presets, cross-lab review toggles, sandbox mode |
+| **1 · + Order** *(front counter)* | Start a job, adjust team size, set a Frontier dollar cap, or run the zero-token demo |
+| **2 · Board** *(Command Board & Action Deck)* | Unified **Owner Action Deck** (questions, plan approvals, ready trucks, manual verdicts, paused jobs) pinned above the live ShopTalk feed (`All` · `Action Needed` · `Live Feed`) |
+| **3 · Blueprint** | Live progress: checklist of requirements, tasks grouped by status, baseline check results, pause/resume |
+| **4 · Truck** | Diff-by-diff inspection, final report, **Approve & Ship (`+1`)**, **Deny / Request Changes (`-1`)**, or **Discard (`0` neutral)** |
+| **5 · Team** *(Floor · Handbook · Agent Forge)* | **Active Floor** live logs, **Employee Handbook** (RL benchmarks + owner `+1/-1/0` ratings & history), and the **Drag-and-Drop Agent Forge & Armory** (`Open-Weight Brains & Benchmarks`, `Harness Rack`, `Agent Tools & Project Tool Wall`) |
+| **6 · Settings** | **Runtimes & Keys** (OpenAI **Continue with ChatGPT** SIWC, Gemini/Claude API keys, Local OSS, Keychain Vault), **Universal RL Compute Port** (Local GPU, Droplet/Hostinger/RunPod Remote Cluster, 1-click Agent Wiring Prompt, git-ignored `local/` personal overlay), and **Shop Rules & Limits** |
 
 ---
 

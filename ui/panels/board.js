@@ -1,11 +1,13 @@
-// Board panel: the message board as compact ShopTalk lines with a colored kind tag (contract sections 7 and 13b),
-// open questions for the owner pinned on top, a filter by scope or agent, and a composer for the owner
-// (kind, to, scope, re, body). It appends new messages one by one and never rebuilds the list for a new post.
-// Deep links: ?panel=board&to=@m3 (composer addressed to an agent), &re=<id> (reply to a post).
+// Board panel: combines the Owner Action Deck (Inbox) and the ShopTalk message stream in one unified command center.
+// Quick view modes:
+//   all      Action Deck pinned on top (collapsible) + Live ShopTalk message stream + Reply composer
+//   actions  Full-sheet Owner Action Deck (questions, plan approve, truck ready, verdicts, budget/paused, RL gaps)
+//   feed     Live ShopTalk message stream + Reply composer only
+// Deep links: ?panel=board&view=actions (or legacy ?panel=inbox), &to=@m3 (addressed to an agent), &re=<id> (reply to a post).
 
-import { h, mount, clear } from '../lib/dom.js';
+import { h, mount, clear, keyed } from '../lib/dom.js';
 import * as ui from '../lib/widgets.js';
-import { syncQuestions } from '../lib/questions.js';
+import { renderInboxItem, inboxItemSig } from './inbox.js';
 
 // Kind groups of the filter bar. Every ShopTalk kind is in exactly one group.
 const GROUPS = [
@@ -33,8 +35,8 @@ const LIST_SLIM = 60;  // px: two rows of posts. The list keeps them under a que
 const ROW = 26;        // px: one row of posts. With less room than this under a question the list is not drawn
 const fmt = ui.fmt;
 
-// The filter, the draft and the reply target stay while the drawer is closed.
-const keep = { filter: 'all', groups: new Set(GROUPS.map((g) => g.id)), draft: '', to: '', scope: '#build', kind: 'INFO', re: null, pinsOpen: true };
+// The filter, the view mode, the draft and the reply target stay while the drawer is closed.
+const keep = { mode: 'all', filter: 'all', groups: new Set(GROUPS.map((g) => g.id)), draft: '', to: '', scope: '#build', kind: 'INFO', re: null, pinsOpen: true };
 let view = null;
 
 function matches(m, ctx) {
@@ -263,15 +265,30 @@ function syncComposer(ctx) {
 }
 
 function render(container, ctx) {
+  if (ctx.params.view && ['all', 'actions', 'feed'].includes(String(ctx.params.view))) keep.mode = String(ctx.params.view);
+  else if (ctx.params.to || ctx.params.re != null) keep.mode = 'all';
+
+  const modeSeg = ui.segmented([
+    { value: 'all', label: 'All', title: 'Action Deck pinned above the live ShopTalk feed' },
+    { value: 'actions', label: 'Action Needed', title: 'Everything waiting for your approval, answer, or verdict' },
+    { value: 'feed', label: 'Live Feed', title: 'Full-height ShopTalk message stream' },
+  ], keep.mode, (v) => {
+    keep.mode = v;
+    ctx.setParams({ view: v === 'all' ? null : v });
+  });
+  const modeNote = h('span.dim.bd-modenote');
+  const modeBar = h('div.bd-modebar', modeSeg, h('span.grow'), modeNote);
+
   const filterBox = ui.select([], keep.filter, { 'aria-label': 'Filter by agent, channel or task', onchange: () => { keep.filter = filterBox.select.value; view.limit = PAGE; rebuild(ctx); } });
   const groupBtns = GROUPS.map((g) => h('button.bd-kind', { type: 'button', dataset: { group: g.id }, 'aria-pressed': String(keep.groups.has(g.id)), title: `${g.title}: ${g.kinds.join(', ')}. Press to show or hide.`,
     onclick: () => { if (keep.groups.has(g.id)) keep.groups.delete(g.id); else keep.groups.add(g.id); syncFilterUi(); rebuild(ctx); } }, h('span', { class: ['tag', 'k-' + g.kinds[0]] }, g.label)));
   const count_ = h('span.bd-count');
-  // Questions for the owner stay on top. The head folds them away when the owner wants the list back.
+  // Action Deck (Inbox + Questions) stays pinned on top in 'all' mode, or fills the sheet in 'actions' mode.
   const pinCards = h('div.bd-pincards');
-  const pinHead = h('button.bd-pinhead', { type: 'button', onclick: () => { if (view.foldOnce) { view.foldOnce = false; keep.pinsOpen = true; } else keep.pinsOpen = !keep.pinsOpen; pinQuestions(ctx); } },
+  const pinHead = h('button.bd-pinhead', { type: 'button', onclick: () => { if (view.foldOnce) { view.foldOnce = false; keep.pinsOpen = true; } else keep.pinsOpen = !keep.pinsOpen; pinDeck(ctx); } },
     h('span.caret', { 'aria-hidden': 'true' }), h('span.bd-pintext'), h('span.bd-pinhint', 'fold to see more posts'));
   const pins = h('div.bd-pins', { hidden: true }, pinHead, pinCards);
+  const actionsFull = h('div.bd-actions-full', { hidden: true });
   const list = h('div.bd-list', { tabIndex: 0, role: 'log', 'aria-label': 'Board messages' });
   // A bar under the list (not over its last post) that says how many posts arrived while the owner read further up.
   const fresh = h('button.bd-new', { type: 'button', hidden: true, title: 'Go to the newest post', onclick: () => { toBottom(); seen(ctx); } }, h('span.caret', { 'aria-hidden': 'true' }), h('span'));
@@ -328,60 +345,114 @@ function render(container, ctx) {
     h('div.bd-compose-top', ui.field('Kind', kindBox), ui.field('To', toBox), ui.field('Scope', scopeBox)),
     fBody,
     h('div.bd-compose-foot', note, send));
-  // When a pinned question leaves too little room, the composer folds to this one line (see layoutPins). A press opens it again.
+  // When a pinned item leaves too little room, the composer folds to this one line (see layoutPins). A press opens it again.
   const write = h('button.bd-write', { type: 'button', title: 'Open the composer', onclick: () => { view.writing = true; layoutPins(ctx); body.focus(); } },
     h('span.caret', { 'aria-hidden': 'true' }), 'Write a post');
-  // The composer folds again when the owner leaves it with nothing typed. (A press inside it, on a place that takes no focus, is not leaving.)
   compose.addEventListener('pointerdown', () => { if (view) view.pressedAt = performance.now(); });
   compose.addEventListener('focusout', () => requestAnimationFrame(() => {
     if (!view || view.compose !== compose || compose.contains(document.activeElement) || performance.now() - view.pressedAt < 400) return;
     view.writing = false;
     layoutPins(ctx);
   }));
-  const root = h('div.bd', bar, pins, h('div.bd-wrap', list), fresh, write, compose);
+  const wrap = h('div.bd-wrap', list);
+  const root = h('div.bd', modeBar, actionsFull, bar, pins, wrap, fresh, write, compose);
   container.append(root);
 
   const job = ctx.job;
-  view = { jobId: job ? job.id : null, root, bar, compose, list, pins, pinCards, pinHead, count: count_, fresh, filter: filterBox.select, groupBtns, to: toBox.select, kind: kindBox.select, scope: scopeBox.select, body, send, re, note, toOpts: null,
-    top: h('div.bd-older'), topSig: null, limit: PAGE, rows: 0, lastId: 0, lastTs: 0, pending: 0, total: 0, optSig: null, fetchedFor: undefined, slim: false, nolist: false, writing: false, pressedAt: 0, wrap: list.parentNode, write, follow,
-    foldOnce: !!(ctx.params.to || ctx.params.re != null), // the owner came to write a post: the questions start folded this time, so the list and the composer show
+  view = { jobId: job ? job.id : null, root, modeBar, modeSeg, modeNote, actionsFull, actionsHead: h('div.ib-head'), actionsEmpty: h('div'), actionsList: h('div.ib-list'), actionsHeadSig: null, actionsEmptySig: null,
+    bar, compose, list, pins, pinCards, pinHead, count: count_, fresh, filter: filterBox.select, groupBtns, to: toBox.select, kind: kindBox.select, scope: scopeBox.select, body, send, re, note, toOpts: null,
+    top: h('div.bd-older'), topSig: null, limit: PAGE, rows: 0, lastId: 0, lastTs: 0, pending: 0, total: 0, optSig: null, fetchedFor: undefined, slim: false, nolist: false, writing: false, pressedAt: 0, wrap, write, follow,
+    foldOnce: !!(ctx.params.to || ctx.params.re != null),
     prefs: ctx.prefs, onResize: () => layoutPins(ctx) };
+  actionsFull.append(view.actionsHead, view.actionsEmpty, view.actionsList);
   window.addEventListener('resize', view.onResize);
 
   // deep links: a message to one agent, or a reply to one post
-  if (ctx.params.to) { keep.to = String(ctx.params.to); keep.re = null; if (keep.kind !== 'ASK') keep.kind = 'REQ'; } // an order by default; ASK stays when it was chosen
+  if (ctx.params.to) { keep.to = String(ctx.params.to); keep.re = null; if (keep.kind !== 'ASK') keep.kind = 'REQ'; }
   options(ctx);
   if (ctx.params.re != null) reply(ctx, Number(ctx.params.re), false);
-  pinQuestions(ctx);
+  pinDeck(ctx);
   rebuild(ctx);
-  ctx.on('boardchange', (msgs) => { redraw(ctx, msgs); pinQuestions(ctx); });
-  requestAnimationFrame(() => { if (view && view.list === list) { toBottom(); if (ctx.params.to || ctx.params.re != null) body.focus({ preventScroll: true }); } });
+  ctx.on('boardchange', (msgs) => { redraw(ctx, msgs); pinDeck(ctx); });
+  requestAnimationFrame(() => { if (view && view.list === list && keep.mode !== 'actions') { toBottom(); if (ctx.params.to || ctx.params.re != null) body.focus({ preventScroll: true }); } });
 }
 
 /** Aim the composer at one post: the reply kind, the addressee and the scope follow that post. */
 function reply(ctx, id, focus = true) {
   const m = ctx.store.msg(id);
   if (!m || !view) return;
+  if (keep.mode === 'actions') keep.mode = 'all';
   keep.re = m.id;
   keep.kind = (m.state === 'open' || m.defaulted ? REPLY_KINDS[m.kind] || [] : [])[0] || 'INFO';
   keep.to = m.fromId && m.from ? m.from : '';
   syncComposer(ctx);
+  pinDeck(ctx);
   if (focus) view.body.focus();
 }
 
-/** Open questions for the owner stay on top, with a button per option. */
-function pinQuestions(ctx) {
+/** Render the Owner Action Deck (all Inbox items + pinned owner questions) in 'all' or 'actions' mode. */
+function pinDeck(ctx) {
   if (!view) return;
-  const job = ctx.job;
-  const qs = ctx.sel.isOpen(job) ? ctx.sel.ownerQuestions(ctx.store, job.id) : [];
-  const waiting = qs.filter((q) => !q.defaulted).length;
+  const { store, sel } = ctx;
+  const att = sel.ownerAttention(store);
+  const items = att.items.slice().sort((a, b) => Number(a.quiet) - Number(b.quiet) || b.since - a.since);
+  const loud = att.loud.length, quiet = items.length - loud;
+  const away = store.settings && store.settings.presence === 'away';
+
+  // Update the Action Needed button badge count & top summary note
+  const actBtn = view.modeSeg.querySelectorAll('button')[1];
+  if (actBtn) {
+    const label = items.length ? `Action Needed (${loud || items.length})` : 'Action Needed';
+    if (actBtn.textContent !== label) actBtn.textContent = label;
+  }
+  view.modeNote.textContent = loud ? `${fmt.plural(loud, 'action waits', 'actions wait')}` : quiet ? `${quiet} note${quiet === 1 ? '' : 's'}` : 'All clear';
+
+  const isActionsOnly = keep.mode === 'actions';
+  const isFeedOnly = keep.mode === 'feed';
+  ctx.setLayout(isActionsOnly ? 'flow' : 'fill');
+  view.root.classList.toggle('is-actions-only', isActionsOnly);
+  view.actionsFull.hidden = !isActionsOnly;
+  view.bar.hidden = isActionsOnly;
+  view.wrap.hidden = isActionsOnly;
+  view.compose.hidden = isActionsOnly;
+  view.write.hidden = isActionsOnly;
+  if (isActionsOnly) view.fresh.hidden = true;
+
+  if (isActionsOnly) {
+    view.pins.hidden = true;
+    const headSig = [loud, quiet, away].join('|');
+    if (view.actionsHeadSig !== headSig) {
+      view.actionsHeadSig = headSig;
+      mount(view.actionsHead,
+        h('div.ib-sum', h('span.strong', loud ? `${fmt.plural(loud, 'action waits', 'actions wait')} for you` : 'Nothing urgent waits for you'),
+          quiet ? h('span.dim', ` · ${quiet} for later`) : null),
+        away ? h('p.ib-away', 'You are away: the hub takes the default answer of every boss question at once. Overturn any default here.') : null);
+    }
+    const emptySig = items.length ? 'some' : 'none';
+    if (view.actionsEmptySig !== emptySig) {
+      view.actionsEmptySig = emptySig;
+      mount(view.actionsEmpty, items.length ? null : ui.emptyState('Action Deck is clear', 'Questions, plan approvals, ready trucks, manual reviews, and RL specialty gaps show up here.',
+        ui.btn('Show All (Deck + Feed)', { small: true, onClick: () => { keep.mode = 'all'; ctx.setParams({ view: null }); } })));
+    }
+    keyed(view.actionsList, items, { key: (it) => it.key, sig: (it) => inboxItemSig(ctx, it), render: (it) => renderInboxItem(ctx, it) });
+    return;
+  }
+
+  if (isFeedOnly || !items.length) {
+    view.pins.hidden = true;
+    layoutPins(ctx);
+    return;
+  }
+
   const open = keep.pinsOpen && !view.foldOnce;
-  view.pins.hidden = !qs.length;
+  view.pins.hidden = false;
   view.pins.classList.toggle('open', open);
   view.pinHead.setAttribute('aria-expanded', String(open));
-  view.pinHead.children[1].textContent = waiting ? `${fmt.plural(waiting, 'question waits', 'questions wait')} for you` : `${fmt.plural(qs.length, 'default')} taken for you`;
+  view.pinHead.children[1].textContent = loud
+    ? `Action Deck · ${fmt.plural(loud, 'action waits', 'actions wait')} for you${quiet ? ` (+${quiet} note${quiet === 1 ? '' : 's'})` : ''}`
+    : `Action Deck · ${fmt.plural(quiet, 'item')} for later`;
   view.pinCards.hidden = !open;
-  syncQuestions(ctx, view.pinCards, qs);
+  keyed(view.pinCards, items, { key: (it) => it.key, sig: (it) => inboxItemSig(ctx, it), render: (it) => renderInboxItem(ctx, it) });
   layoutPins(ctx);
 }
 
@@ -399,35 +470,39 @@ function composing() {
  */
 function layoutPins(ctx) {
   if (!view) return;
+  if (keep.mode === 'actions') { view.root.classList.remove('slim', 'nolist'); view.wrap.style.minHeight = ''; return; }
   const was = view.slim, hid = view.nolist;
   let slim = false, nolist = false, listMin = '';
   if (!view.pins.hidden && !view.pinCards.hidden && !composing()) {
     view.root.classList.remove('slim', 'nolist'); // measure with the composer in full
-    const pins = view.pinHead.offsetHeight + view.pinCards.scrollHeight + 2; // the height the questions need (their box may be squeezed now)
-    const sheet = view.root.clientHeight - view.bar.offsetHeight;
+    const pins = view.pinHead.offsetHeight + view.pinCards.scrollHeight + 2;
+    const sheet = view.root.clientHeight - view.bar.offsetHeight - view.modeBar.offsetHeight;
     slim = pins > sheet - view.compose.offsetHeight - LIST_MIN;
     if (slim) {
       view.root.classList.add('slim');
-      const left = sheet - view.write.offsetHeight - pins; // what the list gets when the cards take what they need
-      nolist = left >= 0 && left < ROW;                    // not one row: the list is not drawn, the cards stay whole
-      listMin = left >= 0 ? '0px' : `${LIST_SLIM}px`;      // the cards fit: the list takes what is left. They do not: two rows stay.
+      const left = sheet - view.write.offsetHeight - pins;
+      nolist = left >= 0 && left < ROW;
+      listMin = left >= 0 ? '0px' : `${LIST_SLIM}px`;
     }
   }
   view.slim = slim; view.nolist = nolist;
   view.wrap.style.minHeight = listMin;
   view.root.classList.toggle('slim', slim);
   view.root.classList.toggle('nolist', nolist);
-  if (hid && !nolist) { if (view.follow.on) { toBottom(); seen(ctx); } else count(ctx); } // the list is back: go on where it was
-  else if (was !== slim && sticks()) { toBottom(); seen(ctx); }                          // the list changed its height: stay on the newest post
+  if (hid && !nolist) { if (view.follow.on) { toBottom(); seen(ctx); } else count(ctx); }
+  else if (was !== slim && sticks()) { toBottom(); seen(ctx); }
 }
 
 export default {
   id: 'board',
-  title: 'Message board',
+  title: 'Board & Action Deck',
   label: 'Board',
   layout: 'fill',
-  badge: ({ store, sel }) => sel.unreadBoard(store),
-  attention: ({ store, sel }) => sel.unreadForOwner(store) > 0, // a post for the owner that the owner has not seen (what waits for an answer rings in the Inbox)
+  badge: ({ store, sel }) => {
+    const att = sel.ownerAttention(store);
+    return att.loud.length || sel.unreadBoard(store) || att.count;
+  },
+  attention: ({ store, sel }) => sel.ownerAttention(store).any || sel.unreadForOwner(store) > 0,
   render,
   update(ctx) {
     if (!view) return;
@@ -435,7 +510,7 @@ export default {
     const job = ctx.job;
     const jobId = job ? job.id : null;
     if (c.has('jobs') || c.has('agents') || c.has('tasks') || c.has('state')) options(ctx);
-    if (c.has('board') || c.has('inbox') || c.has('jobs') || c.has('state')) pinQuestions(ctx);
+    if (c.has('inbox') || c.has('board') || c.has('jobs') || c.has('deliveries') || c.has('tasks') || c.has('agents') || c.has('providers') || c.has('projects') || c.has('settings') || c.has('requisitions') || c.has('state')) pinDeck(ctx);
     // After a refetch the list is kept when the board still holds the last row it shows; otherwise it is built again.
     const b = ctx.store.board;
     const broken = c.has('state') && (view.lastId ? !b.some((m) => m.id === view.lastId && m.ts === view.lastTs) : b.length > 0);

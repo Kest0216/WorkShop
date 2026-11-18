@@ -146,8 +146,10 @@ export function createIntegrate(ctx) {
     const project = ctx.projectOf(job);
     const log = [...(job.mergeLog ?? [])];
     if (!r.empty && !log.some((e) => e.sha === r.mergeSha)) log.push({ sha: r.mergeSha, deliveryId: d.id, kind: 'delivery' });
+    const assignee = task.assigneeId ? ctx.agent(task.assigneeId) : null;
+    const specRosterId = assignee?.rosterId ?? task.rosterId ?? null;
     ctx.patch('jobs', job.id, { intSha: r.mergeSha, mergeLog: log, merging: null });
-    ctx.patch('deliveries', d.id, { status: 'loaded', mergeSha: r.mergeSha, loadedAt: ctx.now(), empty: r.empty === true });
+    ctx.patch('deliveries', d.id, { status: 'loaded', mergeSha: r.mergeSha, loadedAt: ctx.now(), empty: r.empty === true, ...(specRosterId ? { rosterId: specRosterId } : {}) });
     ctx.patch('tasks', taskId, { status: 'merged', progress: 1, hold: null, needsAction: null, why: null });
     await ctx.flush();
     const files = d.files.map((f) => f.path);
@@ -156,8 +158,7 @@ export function createIntegrate(ctx) {
       if (dir) await ctx.git.removeBench(dir).catch((err) => ctx.say('warn', 'orchestrator: bench removal failed', { dir, error: errText(err) }));
     }
     ctx.patch('tasks', taskId, { benchDir: null, reviewDir: null });
-    const assignee = task.assigneeId ? ctx.agent(task.assigneeId) : null;
-    if (assignee?.rosterId) ctx.roster?.recordOutcome?.(assignee.rosterId, { merged: true });
+    if (specRosterId) ctx.roster?.recordOutcome?.(specRosterId, { merged: true });
     if (task.assigneeId) ctx.crew.unbind(task.assigneeId, taskId);
     ctx.digest.refreshBlueprints(job.id);
     ctx.edits.releaseClaims(job.id);

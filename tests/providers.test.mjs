@@ -418,8 +418,9 @@ function world(t, { claude = null, agy = null, auth = {}, keys = {}, timeouts, a
 test('registry: nothing installed', async (t) => {
   const w = world(t);
   const list = await w.providers.detect();
-  assert.deepEqual(list.map((p) => p.id), ['claude', 'gemini', 'oss', 'mock']);
-  const [claude, gemini, oss, mock] = list;
+  assert.deepEqual(list.map((p) => p.id), ['claude', 'gemini', 'openai', 'oss', 'mock']);
+  const [claude, gemini, openai, oss, mock] = list;
+  void openai;
   assert.deepEqual(Object.keys(claude).sort(), ['ack', 'auth', 'cooledModels', 'cooling', 'id', 'installHint', 'installed', 'keySet', 'lab', 'label', 'limit', 'loginCmd', 'mode', 'models', 'path', 'policyNote', 'reason', 'selfTest', 'usable', 'version']);
   assert.deepEqual([claude.ack, claude.cooledModels, claude.selfTest], [false, {}, null]);
   assert.equal(claude.limit, null, 'no plan-limit notice yet');

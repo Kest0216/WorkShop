@@ -442,6 +442,44 @@ function render(container, ctx) {
   }
 }
 
+export { iconEl, editHarnessModal };
+
+export function previewHarnessModal(ctx, item) {
+  const wf = (item.protocol && item.protocol.workflow) || [];
+  const rewards = (item.rft && item.rft.rewardSignals) || [];
+  ctx.modal({ title: `.shop/HARNESS.md · ${item.label}`, wide: true, buttons: [{ label: 'Close', primary: true, tone: 'steel' }],
+    body: h('div.stack',
+      h('p', String(item.summary || '')),
+      h('div.hr-meta', ui.chip(item.id, 'dark'), ui.chip(item.roleHint === 'manager' ? 'Team Lead' : 'Specialist', 'plain'), ...(item.domains || []).map((d) => ui.domainChip(d))),
+      item.protocol && item.protocol.systemPromptAddon ? h('pre.term', String(item.protocol.systemPromptAddon)) : null,
+      wf.length ? [h('div.caps', 'Workflow'), h('ul.list', wf.map((s) => h('li.li', String(s))))] : null,
+      h('div.caps', 'Tools'),
+      h('div.hr-meta', ...(item.tools || []).map((t) => ui.chip(String(t), 'blue'))),
+      rewards.length ? [h('div.caps', 'RL Reward Signals'), h('div.hr-meta', ...rewards.map((r) => ui.chip(String(r), 'amber')))] : null,
+      item.rft && item.rft.notes ? h('p.dim', String(item.rft.notes)) : null) });
+}
+
+export function mountProjectToolsSection(container, ctx) {
+  if (!keep.wired) { keep.wired = true; ctx.store.on('toolrun', onRun); }
+  view = { tab: 'tools', head: h('div.tw-head'), note: h('div'), grid: h('div.tw-grid', { hidden: true }), runs: h('div.tw-log'), rackBox: h('div'), rackSig: null, headSig: null, state: null, runSig: null, runList: null, error: null };
+  container.append(view.head, view.note, view.grid, view.runs);
+  drawTools(ctx);
+  drawRuns();
+  load(ctx);
+  return {
+    update() {
+      if (!view) return;
+      const c = ctx.changes;
+      if (c.has('projects') || c.has('jobs') || c.has('state')) {
+        const before = view.headSig;
+        drawTools(ctx);
+        if (view.headSig !== before || c.has('state')) load(ctx);
+      }
+    },
+    dispose() { view = null; },
+  };
+}
+
 export default {
   id: 'toolkit',
   title: 'Harnesses & Toolkit',

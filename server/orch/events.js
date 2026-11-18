@@ -47,6 +47,22 @@ export function createEvents(ctx) {
       case 'FIX': {
         const target = m.re ? ctx.board.get(m.re) : null;
         if (target?.kind === 'DONE') {
+          if (m.kind === 'FIX' && m.role === 'human') {
+            const d = ctx.deliveriesOf(m.jobId, (x) => x.doneMsgId === target.id)[0] ?? null;
+            const t = d ? ctx.task(d.taskId) : null;
+            const maker = (d?.makerId ? ctx.agent(d.makerId) : null) || (target.fromId ? ctx.agent(target.fromId) : null);
+            const rosterId = d?.rosterId || t?.rosterId || maker?.rosterId || null;
+            if (rosterId) {
+              ctx.roster?.recordRating?.(rosterId, {
+                delta: -1,
+                outcome: 'denied',
+                jobId: m.jobId,
+                taskId: d?.taskId ?? null,
+                deliveryId: d?.id ?? null,
+                note: String(m.body || 'Denied by owner in review'),
+              });
+            }
+          }
           ctx.review.onVerdict(m);
           if (m.role !== 'hub') wake = false; // the verdict wakes the maker when it takes effect
         }
