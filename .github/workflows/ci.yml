@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-guardrails:
+    name: test-and-guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure git identity for integration test repos
+        run: |
+          git config --global user.name "WorkShop CI"
+          git config --global user.email "ci@workshop.local"
+
+      - name: Verify public repo hygiene (no personal local/ overlays or secrets tracked)
+        run: |
+          LEAKED=$(git ls-files 'local/*' ':!local/README.md' 'data/*' 'config/settings.json' 'config/settings.json.bak' '*.pem' '*.key' '.env' '.env.*')
+          if [ -n "$LEAKED" ]; then
+            echo "::error::Private personal overlay or runtime files are tracked in git:"
+            echo "$LEAKED"
+            exit 1
+          fi
+          echo "Public repo hygiene check passed."
+
+      - name: Run core, API, RL Forge, provider, and UI contract suites
+        run: |
+          node --test \
+            tests/forge-rl-ratings.test.mjs \
+            tests/config.test.mjs \
+            tests/harnesses.test.mjs \
+            tests/roster.test.mjs \
+            tests/training.test.mjs \
+            tests/providers.contract.test.mjs \
+            tests/providers.test.mjs \
+            tests/router.test.mjs \
+            tests/core.adversarial.test.mjs \
+            tests/api.test.mjs \
+            tests/oss-provider.test.mjs \
+            tests/ui-stub/ui-lib.test.mjs \
+            tests/ui-stub/stub.test.mjs \
+            tests/ui-stub/wiring.test.mjs
